@@ -1,4 +1,4 @@
-# HAVOK Regime-Shift Detector v0.3.0
+# HAVOK Regime-Shift Detector v0.5.0
 
 **Turn chaos into early-warning signals.**
 
@@ -6,15 +6,17 @@ Implementation of the HAVOK algorithm from *"Chaos as an Intermittently Forced L
 
 Given any univariate time series, HAVOK extracts the hidden intermittent forcing signal that precedes sudden regime shifts (seizures, crashes, tipping points, etc.).
 
-## What's New in v0.3.0 🚀
+## What's New in v0.5.0 🚀
 
-- **`havok predict`** — ESN-based forcing prediction + regime-shift risk forecasting
-- **`havok chaos`** — Edge-of-chaos metrics (Lyapunov exponent, critical slowing down)
-- **`edge_of_chaos.py`** — Quantitative edge-of-chaos scoring (no longer just narrative!)
-- **Vectorized ESN** — `FastForcingRiskPredictor` with improved performance
-- **87 tests** (up from 5) — full coverage of all modules
-- **GitHub Actions CI** — automated testing on push
-- **Config profiles** — `havok_config.yaml` (eeg, finance, climate, lorenz_demo)
+- **sklearn-compatible** `HavokEstimator` — `fit() / transform() / predict_risk() / score()`
+- **User analysis tools** — `analyze()` one-liner, `batch_analyze()`, `suggest_and_explain()`
+- **Confidence intervals** — bootstrap forcing CI + risk probability (not just binary)
+- **4 differentiation methods** — finite diff, spline, total variation, gradient
+- **GPU acceleration** — transparent CuPy fallback for SVD/lstsq
+- **Cross-validation** — `cross_val_score_havok()` with true hold-out
+- **Benchmark suite** — 5 datasets × 5 methods, ranking table
+- **Export** — CSV/JSON/`.havok` serialization
+- **146 tests** (including property-based Hypothesis)
 
 ## Quick Start
 
@@ -103,12 +105,13 @@ havok-toolbox/
 │       ├── ring_buffer.py / incremental_hankel.py / brand_svd.py
 │       ├── incremental_havok.py / risk_engine.py / alert_pipeline.py
 │       └── engine.py          # Async orchestrator
-├── cli.py                 # `havok` CLI (7 commands)
+├── _cli_havok.py          # `havok` CLI (7 commands)
+├── benchmark/             # 5 datasets × 5 methods + rankings
 ├── dashboard/
 │   ├── app.py             # Batch analysis dashboard
 │   └── engine_dashboard.py # Live streaming dashboard
 ├── data/                  # Sample CSVs + EDF
-├── tests/                 # 114 tests (8 files)
+├── tests/                 # 146 tests (property-based + Hypothesis)
 └── .github/workflows/     # CI
 ```
 
