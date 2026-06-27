@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "havok-toolbox"
-version = "0.5.0"
+version = "0.6.0"
 description = "HAVOK Regime-Shift Detector: extract intermittent forcing signals from univariate time series using delay embedding + SVD (Brunton et al. 2017)"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -26,12 +26,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-all = ["havok-toolbox[streaming,progress,gpu,full]"]
+all = ["havok-toolbox[streaming,progress,gpu,eeg,automl,fast]"]
 streaming = ["paho-mqtt>=2.0"]
 progress = ["tqdm>=4.66"]
 gpu = ["cupy-cuda12x>=13.0"]
 eeg = ["pyedflib>=0.1", "mne>=1.6"]
-full = ["havok-toolbox[streaming,progress,gpu,eeg]"]
+automl = ["optuna>=4.0"]
+fast = ["polars>=1.0"]
+full = ["havok-toolbox[streaming,progress,gpu,eeg,automl,fast]"]
 dev = ["pytest", "hypothesis>=6.100"]
 
 [project.scripts]

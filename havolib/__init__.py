@@ -35,5 +35,8 @@ from .serialize import save_pipeline, load_pipeline
 from .logging_config import init_logging, get_logger
 from .estimator import HavokEstimator, cross_val_score_havok, DIFF_METHODS
 from .user import analyze, AnalysisReport, batch_analyze, suggest_and_explain
+from .multichannel import MultichannelHAVOK, MultichannelResult
+from .automl import auto_optimize, suggest_from_automl
+from .polars_loader import load_csv_fast, load_parquet_fast, batch_load_csvs
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
