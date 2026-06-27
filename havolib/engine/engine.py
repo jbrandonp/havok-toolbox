@@ -29,7 +29,7 @@ log = logging.getLogger("havok.engine")
 class StreamConfig:
     """Configuration for one input stream."""
     id: str
-    source: str  # "mqtt://...", "ws://...", "watch://...", "synthetic://lorenz", "synthetic://eeg"
+    source: str  # "mqtt://...", "csv://...", "synthetic://lorenz", "synthetic://eeg"
     havok_params: Dict[str, Any] = field(default_factory=dict)
     buffer_seconds: float = 300.0
     sample_rate: Optional[float] = None

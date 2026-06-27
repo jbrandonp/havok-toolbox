@@ -150,18 +150,19 @@ def export_csv(path: str, time: np.ndarray, forcing: np.ndarray, risk: np.ndarra
 
 
 def export_json(path: str, metrics: Dict[str, Any]) -> None:
-    """Export HAVOK metrics to JSON."""
-    serializable = {}
-    for k, v in metrics.items():
+    """Export HAVOK metrics to JSON (recursively handles nested ndarrays)."""
+    def _sanitize(v):
         if isinstance(v, np.ndarray):
-            serializable[k] = v.tolist()
-        elif isinstance(v, (np.integer, np.floating)):
-            serializable[k] = float(v)
+            return v.tolist()
+        elif isinstance(v, (np.integer, np.floating, np.bool_)):
+            return v.item()
         elif isinstance(v, dict):
-            serializable[k] = {kk: float(vv) if isinstance(vv, (np.integer, np.floating)) else vv
-                               for kk, vv in v.items()}
-        else:
-            serializable[k] = v
+            return {kk: _sanitize(vv) for kk, vv in v.items()}
+        elif isinstance(v, (list, tuple)):
+            return [_sanitize(x) for x in v]
+        return v
+
+    serializable = {k: _sanitize(v) for k, v in metrics.items()}
     with open(path, "w") as f:
         json.dump(serializable, f, indent=2, default=str)
 

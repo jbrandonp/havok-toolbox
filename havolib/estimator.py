@@ -381,18 +381,19 @@ def cross_val_score_havok(
         scores = []
 
         for fold in range(cv):
-            # Time series split: train on first part, test on hold-out
             train_end = n - (cv - fold) * fold_size
-            X_train = X[:train_end]
+            test_start = train_end
+            test_end = n - (cv - fold - 1) * fold_size
+            X_test = X[test_start:test_end] if test_end > test_start else X[train_end:]
 
             try:
+                m_val = params.get("m", 50)
+                if len(X_test) < m_val * 2:
+                    scores.append(0.0)
+                    continue
                 est = HavokEstimator(**params, random_state=random_state)
-                est.fit(X_train)
-
-                if scoring == "max_forcing":
-                    scores.append(float(np.max(np.abs(est.forcing_))))
-                else:
-                    scores.append(est.score(X_train))
+                est.fit(X_test)
+                scores.append(float(np.max(np.abs(est.forcing_))))
             except Exception:
                 scores.append(0.0)
 
