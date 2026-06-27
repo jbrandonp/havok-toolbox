@@ -1,9 +1,13 @@
 import click
 import numpy as np
+import yaml
+from pathlib import Path
 
 from havolib.data_loader import load_csv, generate_lorenz
 from havolib.pipeline import HavokPipeline
 from havolib.visualization import plot_dashboard
+from havolib.ml_risk_predictor import quick_forcing_risk
+from havolib.edge_of_chaos import edge_of_chaos_score
 
 # Lazy import for optional viz dep (installed as part of base now)
 def _get_pio():
@@ -42,6 +46,8 @@ def cli():
 @click.option('--window', default=100, show_default=True, help='Rolling window for risk.')
 @click.option('--output', '-o', default='havok_report.html', show_default=True,
               help='Output HTML file.')
+@click.option('--config', '-C', 'profile', default=None, 
+              help='Load params from havok_config.yaml profile (eeg, finance, climate, lorenz_demo).')
 # === NEW: Pre-processing (deeper layer) ===
 @click.option('--preprocess', is_flag=True, default=False, help='Enable full pre-processing (interpolate + outliers + smooth).')
 @click.option('--smooth', default='savgol', type=click.Choice(['savgol', 'lowpass', 'none']), help='Smoothing method.')
@@ -49,9 +55,26 @@ def cli():
 @click.option('--outlier', default='iqr', type=click.Choice(['iqr', 'zscore', 'none']), help='Outlier removal method.')
 # === NEW: Surrogate validation ===
 @click.option('--surrogates', default=0, type=int, help='Number of phase-randomized surrogates for statistical validation (0 = disabled).')
-def analyze(filepath, column, tau, m, auto, r, threshold_std, window, output,
+def analyze(filepath, column, tau, m, auto, r, threshold_std, window, output, profile,
             preprocess, smooth, smooth_window, outlier, surrogates):
     """Run HAVOK analysis on a CSV file and produce an interactive report."""
+    from havolib.config import load_config as load_havok_config
+
+    # Load profile if specified
+    if profile:
+        cfg = load_havok_config(profile=profile)
+        if tau is None:
+            tau = cfg["tau"]
+        if m is None:
+            m = cfg["m"]
+        r = cfg["r"]
+        threshold_std = cfg["threshold_std"]
+        window = cfg["window"]
+        preproc = cfg.get("preprocess", {})
+        if not preprocess:
+            preprocess = any(preproc.values())
+        click.echo(f"Loaded profile '{profile}': tau={tau}, m={m}, r={r}")
+
     click.echo(f"Loading {filepath} column '{column}'...")
     data = load_csv(filepath, column)
     t = np.arange(len(data))
@@ -137,6 +160,190 @@ def suggest(filepath, column, max_lag, max_m):
     click.echo(f"  m   = {params['m']}")
     click.echo(f"  method: {params['method']}")
     click.echo("Use these with: havok analyze ... --tau X --m Y")
+
+
+@cli.command()
+@click.argument('filepath', type=click.Path(exists=True))
+@click.option('--column', '-c', required=True, help='Column name.')
+@click.option('--horizon', default=30, show_default=True, help='Prediction horizon.')
+@click.option('--reservoir', default=150, show_default=True, help='ESN reservoir size.')
+@click.option('--output', '-o', default='havok_predict_report.html', show_default=True)
+def predict(filepath, column, horizon, reservoir, output):
+    """Predict future forcing and regime-shift risk using Echo State Network.
+
+    Requires 'havok analyze' to be run first, or provide a CSV.
+    Runs HAVOK extraction then ESN prediction on the forcing signal.
+    """
+    click.echo(f"Loading {filepath} column '{column}'...")
+    data = load_csv(filepath, column)
+    t = np.arange(len(data))
+
+    # Step 1: Extract forcing via HAVOK
+    click.echo("Extracting forcing signal via HAVOK...")
+    pipeline = HavokPipeline()
+    pipeline.auto_fit(t, data)
+    forcing = pipeline.get_forcing()
+
+    click.echo(f"  Max |forcing| = {np.max(np.abs(forcing)):.4f}")
+
+    # Step 2: ESN prediction
+    click.echo(f"Training Echo State Network (N={reservoir})...")
+    result = quick_forcing_risk(
+        forcing,
+        horizon=horizon,
+        reservoir_size=reservoir,
+    )
+
+    risk_pct = result["regime_shift_risk"] * 100
+    click.echo(f"  Regime-shift risk: {risk_pct:.1f}%")
+    click.echo(f"  Predicted forcing (first 5): {result['predicted_forcing'][:5].round(4)}")
+
+    # Step 3: Edge of chaos
+    click.echo("Computing edge-of-chaos metrics...")
+    eoc = edge_of_chaos_score(data)
+    click.echo(f"  Lyapunov exponent: {eoc['largest_lyapunov_exponent']:.4f}")
+    click.echo(f"  Critical slowing down: {eoc['critical_slowing_down_lag1']:.3f}")
+    click.echo(f"  Edge-of-chaos score: {eoc['edge_of_chaos_score']:.2f}")
+    click.echo(f"  → {eoc['interpretation']}")
+
+    # Generate report
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+    fig = make_subplots(
+        rows=3, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.06,
+        subplot_titles=("Forcing Signal + Predicted", "Regime-Shift Risk", "Predicted Forcing (zoom)")
+    )
+
+    fig.add_trace(
+        go.Scatter(y=forcing, mode='lines', name='Forcing (history)', line=dict(color='#1f77b4')),
+        row=1, col=1
+    )
+    future_x = np.arange(len(forcing), len(forcing) + horizon)
+    fig.add_trace(
+        go.Scatter(x=future_x, y=result['predicted_forcing'],
+                   mode='lines+markers', name='Predicted', line=dict(color='#d62728', dash='dash')),
+        row=1, col=1
+    )
+    fig.add_trace(
+        go.Scatter(y=result['predicted_forcing'], mode='lines', name='Predicted', line=dict(color='#d62728')),
+        row=3, col=1
+    )
+    fig.add_hline(y=0, line_dash='dash', line_color='gray', row=3, col=1)
+
+    risk_array = np.zeros(horizon)
+    risk_array[-1] = result['regime_shift_risk']
+    fig.add_trace(
+        go.Bar(y=[result['regime_shift_risk']], name='Risk', marker_color='#ff7f0e',
+               text=f"{risk_pct:.1f}%", textposition='auto'),
+        row=2, col=1
+    )
+
+    fig.update_layout(height=800, title_text="HAVOK ESN Predictor — Forcing Forecast & Risk")
+
+    _get_pio().write_html(fig, file=output, auto_open=False)
+    click.echo(f"✅ Predict report saved to {output}")
+
+
+@cli.command()
+@click.argument('filepath', type=click.Path(exists=True))
+@click.option('--column', '-c', required=True, help='Column name.')
+def chaos(filepath, column):
+    """Compute edge-of-chaos metrics for a time series."""
+    data = load_csv(filepath, column)
+    eoc = edge_of_chaos_score(data)
+
+    click.echo(f"Edge-of-Chaos Analysis for {filepath} ({column}):")
+    click.echo(f"  Lyapunov exponent:     {eoc['largest_lyapunov_exponent']:+.4f}")
+    click.echo(f"  Critical slowing down: {eoc['critical_slowing_down_lag1']:.3f}")
+    click.echo(f"  Edge-of-chaos score:   {eoc['edge_of_chaos_score']:.3f}")
+    click.echo(f"  → {eoc['interpretation']}")
+
+
+@cli.group()
+def engine():
+    """Start and manage the HAVOK streaming engine."""
+    pass
+
+
+@engine.command("start")
+@click.option("--config", "-c", default="engine.yaml", show_default=True, help="Engine config file.")
+@click.option("--duration", default=0, help="Run for N seconds (0 = forever).")
+def engine_start(config, duration):
+    """Start the HAVOK streaming engine."""
+    import asyncio
+    from havolib.engine.engine import HavokEngine
+
+    click.echo(f"🚀 Starting HAVOK Engine with config: {config}")
+
+    eng = HavokEngine(config_path=config)
+    click.echo(f"   Streams: {list(eng._streams.keys())}")
+
+    async def run_engine():
+        await eng.start()
+        if duration > 0:
+            await asyncio.sleep(duration)
+            await eng.stop()
+        else:
+            try:
+                while True:
+                    await asyncio.sleep(10)
+                    states = eng.get_all_states()
+                    for sid, state in states.items():
+                        if state:
+                            click.echo(f"  [{sid}] pts={state['points_processed']} forcing={state['latest_forcing']:.4f}")
+            except KeyboardInterrupt:
+                pass
+            finally:
+                await eng.stop()
+
+    asyncio.run(run_engine())
+    click.echo("Engine stopped.")
+
+
+@engine.command("list")
+def engine_list():
+    """List available engine config streams."""
+    import yaml
+    try:
+        with open("engine.yaml") as f:
+            cfg = yaml.safe_load(f)
+    except FileNotFoundError:
+        click.echo("No engine.yaml found. Create one with 'havok engine init'.")
+        return
+
+    for s in cfg.get("streams", []):
+        alerts = len(s.get("alerts", []))
+        click.echo(f"  {s['id']:20s} → {s['source']:25s} ({alerts} alert rules)")
+
+
+@engine.command("init")
+def engine_init():
+    """Create a default engine.yaml config."""
+    from pathlib import Path
+    import shutil
+    src = Path(__file__).parent / "engine.yaml"
+    dst = Path.cwd() / "engine.yaml"
+    if dst.exists():
+        click.echo(f"{dst} already exists. Delete it first or use --force.")
+    else:
+        shutil.copy(str(src), str(dst))
+        click.echo(f"Created {dst}")
+
+
+@cli.command("benchmark")
+@click.option("--datasets", "-d", multiple=True, help="Dataset names (repeatable).")
+@click.option("--methods", "-m", multiple=True, help="Method names (repeatable).")
+def benchmark_cmd(datasets, methods):
+    """Benchmark HAVOK vs baselines on regime-shift datasets."""
+    from benchmark.runner import run_benchmark, print_summary
+    ds = list(datasets) if datasets else None
+    ms = list(methods) if methods else None
+    click.echo("🚀 HAVOK Benchmark — Regime-Shift Detection")
+    results = run_benchmark(datasets=ds, methods=ms, verbose=True)
+    print_summary(results)
 
 
 if __name__ == '__main__':

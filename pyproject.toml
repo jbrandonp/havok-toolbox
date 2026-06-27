@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "havok-toolbox"
-version = "0.2.0"
+version = "0.5.0"
 description = "HAVOK Regime-Shift Detector: extract intermittent forcing signals from univariate time series using delay embedding + SVD (Brunton et al. 2017)"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,11 +33,11 @@ havok = "cli:cli"
 
 [tool.setuptools]
 py-modules = ["cli"]
-packages = ["havolib"]
+packages = ["havolib", "havolib.engine"]
 
 [tool.setuptools.package-data]
 "*" = ["data/*.csv", "data/chbmit/*.edf"]
 
 [project.urls]
-Homepage = "https://github.com/yourname/havok-toolbox"
+Homepage = "https://github.com/jbrandonp/havok-toolbox"
 Documentation = "README.md"

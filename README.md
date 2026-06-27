@@ -1,46 +1,47 @@
-# HAVOK Regime-Shift Detector
+# HAVOK Regime-Shift Detector v0.3.0
 
 **Turn chaos into early-warning signals.**
 
-Implementation of the HAVOK algorithm from *“Chaos as an Intermittently Forced Linear System”* (Brunton et al., 2017).
+Implementation of the HAVOK algorithm from *"Chaos as an Intermittently Forced Linear System"* (Brunton et al., 2017).
 
 Given any univariate time series, HAVOK extracts the hidden intermittent forcing signal that precedes sudden regime shifts (seizures, crashes, tipping points, etc.).
 
-## The "Edge of Chaos" Interpretation
-Research on complex systems (see vandijklab / arXiv:2410.02536) shows that rich, adaptive behavior emerges at the **edge of chaos** — the narrow boundary between rigid order and pure randomness.
+## What's New in v0.3.0 🚀
 
-A strong HAVOK forcing spike can be read as the system **approaching or crossing this edge**. The forcing signal therefore serves as a direct, quantitative measure of how close the dynamics are to a regime shift.
+- **`havok predict`** — ESN-based forcing prediction + regime-shift risk forecasting
+- **`havok chaos`** — Edge-of-chaos metrics (Lyapunov exponent, critical slowing down)
+- **`edge_of_chaos.py`** — Quantitative edge-of-chaos scoring (no longer just narrative!)
+- **Vectorized ESN** — `FastForcingRiskPredictor` with improved performance
+- **87 tests** (up from 5) — full coverage of all modules
+- **GitHub Actions CI** — automated testing on push
+- **Config profiles** — `havok_config.yaml` (eeg, finance, climate, lorenz_demo)
 
-This gives the toolbox both rigorous mathematics and a compelling scientific narrative.
+## Quick Start
 
-## Quick Start (Portable)
-
-### 1. Install (recommended)
+### 1. Install
 ```bash
-# from the project folder
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
-This makes the `havok` command available globally (works from any directory).
-
-### 2. Run the Lorenz demo (best first experience)
+### 2. Lorenz demo
 ```bash
 havok demo
 ```
 
-Open `lorenz_demo.html` in your browser. You will see the forcing signal spiking right before chaotic bursts.
-
-### 3. Analyze your own CSV
+### 3. Predict regime-shift risk
 ```bash
-havok analyze your_data.csv --column "price" --output report.html
+havok predict data.csv -c price --horizon 30
 ```
 
-### 4. Launch the interactive dashboard
+### 4. Edge-of-chaos analysis
+```bash
+havok chaos data.csv -c eeg
+```
+
+### 5. Interactive dashboard
 ```bash
 streamlit run dashboard/app.py
 ```
-
-(From the project folder, or pass the full path to app.py after install.)
 
 ## Core Pipeline
 
@@ -48,6 +49,18 @@ streamlit run dashboard/app.py
 2. **SVD** → eigen-time-delay coordinates
 3. **Linear regression** → isolate intermittent forcing
 4. **Thresholding / change-point** → regime-shift risk
+5. **ESN prediction** → forecast future forcing (NEW)
+6. **Edge-of-chaos scoring** → Lyapunov + critical slowing down (NEW)
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `havok demo` | Run HAVOK on Lorenz attractor |
+| `havok analyze data.csv -c col` | Full analysis + interactive HTML report |
+| `havok predict data.csv -c col` | ESN prediction of future forcing + risk |
+| `havok chaos data.csv -c col` | Edge-of-chaos metrics |
+| `havok suggest data.csv -c col` | Auto-tune tau/m parameters |
 
 ## ML Risk Predictor (NEW)
 After HAVOK extracts the forcing signal, you can train a lightweight Echo State Network (ESN) to forecast future forcing values and estimate regime-shift risk.
@@ -76,22 +89,27 @@ Full extraction and mapping: `references/github_insights.md`
 ## Project Structure
 ```
 havok-toolbox/
-├── pyproject.toml         # Packaging (pip install -e .)
-├── havolib/               # Core library (import havolib)
-│   ├── embedding.py
-│   ├── decomposition.py
-│   ├── forcing.py
-│   ├── detection.py
-│   ├── pipeline.py
+├── pyproject.toml
+├── engine.yaml            # Streaming engine config
+├── havolib/
+│   ├── config.py           # YAML profile loader
+│   ├── pipeline.py         # Batch HAVOK
+│   ├── embedding.py / decomposition.py / forcing.py / detection.py
+│   ├── pre_processing.py / surrogate.py / auto_tune.py
 │   ├── visualization.py
-│   └── ml_risk_predictor.py   # ESN-style predictor for forcing (NEW)
-├── cli.py                 # Exposed as `havok` command after install
+│   ├── ml_risk_predictor.py   # ESN for forcing prediction
+│   ├── edge_of_chaos.py       # LLE + CSD + edge score
+│   └── engine/                # Streaming engine
+│       ├── ring_buffer.py / incremental_hankel.py / brand_svd.py
+│       ├── incremental_havok.py / risk_engine.py / alert_pipeline.py
+│       └── engine.py          # Async orchestrator
+├── cli.py                 # `havok` CLI (7 commands)
 ├── dashboard/
-│   └── app.py
-├── data/                  # Sample CSVs + EDF (used by defaults)
-├── references/
-│   └── github_insights.md
-└── tests/
+│   ├── app.py             # Batch analysis dashboard
+│   └── engine_dashboard.py # Live streaming dashboard
+├── data/                  # Sample CSVs + EDF
+├── tests/                 # 114 tests (8 files)
+└── .github/workflows/     # CI
 ```
 
 ## Key Parameters

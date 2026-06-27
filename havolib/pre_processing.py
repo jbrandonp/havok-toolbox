@@ -35,6 +35,8 @@ def interpolate_missing(x: np.ndarray) -> np.ndarray:
 def remove_outliers(x: np.ndarray, method: str = 'iqr', threshold: float = 3.0) -> np.ndarray:
     """Remove/replace outliers. Returns cleaned series."""
     x = np.asarray(x, dtype=float).copy()
+    if len(x) == 0:
+        return x
     if method == 'iqr':
         q1, q3 = np.percentile(x, [25, 75])
         iqr = q3 - q1

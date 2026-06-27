@@ -36,7 +36,7 @@ This document captures actionable patterns extracted from key repositories relev
 
 ## Action Items Derived
 - [done] ML risk predictor using MagriLab ESN patterns.
-- [in progress] Edge-of-chaos narrative in README.
+- [done] Edge-of-chaos narrative in README — implemented `havolib/edge_of_chaos.py` with LLE + CSD + edge score.
 - Future: full benchmark suite against wangcaidao-style predictors.
 - Future: integrate jobInregina EEG channel selection / artifact rejection patterns into data_loader.
 - Future: Lyapunov / recurrence quantification as complementary diagnostics.

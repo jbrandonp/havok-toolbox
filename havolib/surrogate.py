@@ -20,9 +20,12 @@ def phase_randomized_surrogate(x: np.ndarray, seed: int = None) -> np.ndarray:
     Xf = np.fft.fft(x)
     amp = np.abs(Xf)
     
+    # Use provided seed for reproducible random phases
+    rng = np.random.RandomState(seed) if seed is not None else np.random
+    
     # Random phases only for non-negative frequencies (correct length)
     n_pos = N // 2 + 1
-    rand_phase = np.random.uniform(0, 2 * np.pi, n_pos)
+    rand_phase = rng.uniform(0, 2 * np.pi, n_pos)
     
     # Build symmetric phase for full FFT
     full_phase = np.concatenate([rand_phase, -rand_phase[1:(-1 if N%2==0 else None)][::-1]])

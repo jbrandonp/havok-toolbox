@@ -1,0 +1,68 @@
+# HAVOK Engine Configuration
+# Run with: havok engine start --config engine.yaml
+
+streams:
+  - id: lorenz_demo
+    source: synthetic://lorenz
+    buffer_seconds: 300
+    havok:
+      m: 50
+      tau: 1
+      r: 5
+      threshold_std: 3.0
+      window: 100
+    alerts:
+      - condition: "risk > 0.7"
+        level: warning
+        cooldown: 60
+        targets: [stdout]
+
+  - id: eeg_channel
+    source: synthetic://eeg
+    buffer_seconds: 180
+    sample_rate: 256
+    havok:
+      m: 30
+      tau: 5
+      r: 5
+      threshold_std: 3.0
+      window: 256
+    alerts:
+      - condition: "risk > 0.5 AND surge > 0.6"
+        level: critical
+        cooldown: 30
+        targets: [stdout]
+
+# To add real data sources, uncomment:
+#  - id: btc_price
+#    source: csv://./data/btc_daily.csv
+#    havok:
+#      m: 80
+#      tau: 2
+#      r: 8
+#
+#  - id: factory_vibration
+#    source: mqtt://localhost/topic/sensors/vibration
+#    sample_rate: 1000
+#    havok:
+#      m: 100
+#      tau: 1
+#      r: 10
+
+risk:
+  surge_weight: 0.30
+  trend_weight: 0.25
+  cluster_weight: 0.20
+  significance_weight: 0.25
+
+alert_targets:
+  stdout:
+    type: stdout
+  # telegram:
+  #   type: telegram
+  #   config:
+  #     chat: "@mykateyolo_bot"
+  # webhook:
+  #   type: webhook
+  #   config:
+  #     url: "https://hooks.example.com/alert"

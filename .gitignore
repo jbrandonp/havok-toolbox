@@ -36,16 +36,16 @@ venv.bak/
 *.swo
 *~
 
-# Project specific generated outputs (uncomment if you don't want to commit demos)
-# *.html
-# *.gif
+# Generated outputs
+*.html
+*.gif
+*.havok
 
-# Data - large or personal
+# Data - large files
 data/chbmit/*.edf
-# Keep the small csv samples
 
-# External research - if you want to ignore sub-clones (they are references)
-# external/**/.git
+# External repos
+external/
 
 # OS
 .DS_Store
