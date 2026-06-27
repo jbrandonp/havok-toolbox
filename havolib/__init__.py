@@ -40,5 +40,8 @@ from .automl import auto_optimize, suggest_from_automl
 from .polars_loader import load_csv_fast, load_parquet_fast, batch_load_csvs
 from .adaptive import AdaptiveHAVOK, AdaptiveResult
 from .attribution import explain_forcing_spike
+from .hybrid import HavokTransformer
+from .federated import FederatedHAVOK, FederatedModel
+from .arena import BenchmarkArena, run_arena
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
