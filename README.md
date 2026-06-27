@@ -1,4 +1,4 @@
-# HAVOK Regime-Shift Detector v0.7.0
+# HAVOK Regime-Shift Detector v0.7.1
 
 **Turn chaos into early-warning signals.**
 
@@ -16,7 +16,7 @@ Given any univariate time series, HAVOK extracts the hidden intermittent forcing
 - **Cross-validation** — `cross_val_score_havok()` with true hold-out
 - **Benchmark suite** — 5 datasets × 5 methods, ranking table
 - **Export** — CSV/JSON/`.havok` serialization
-- **146 tests** (including property-based Hypothesis)
+- **155 tests** (including property-based Hypothesis)
 
 ## Quick Start
 
@@ -111,7 +111,7 @@ havok-toolbox/
 │   ├── app.py             # Batch analysis dashboard
 │   └── engine_dashboard.py # Live streaming dashboard
 ├── data/                  # Sample CSVs + EDF
-├── tests/                 # 146 tests (property-based + Hypothesis) — v0.7.0 adds Adaptive HAVOK, Hybrid Transformer, Federated Learning, Attribution, Arena
+├── tests/                 # 155 tests (property-based + Hypothesis) — v0.7.0 adds Adaptive HAVOK, Hybrid Transformer, Federated Learning, Attribution, Arena
 └── .github/workflows/     # CI
 ```
 
