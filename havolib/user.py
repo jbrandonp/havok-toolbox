@@ -17,6 +17,7 @@ Usage:
 
 from __future__ import annotations
 import numpy as np
+import logging
 import pandas as pd
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
@@ -26,6 +27,8 @@ import time
 import warnings
 
 from havolib.pipeline import HavokPipeline
+logger = logging.getLogger("havok.user")
+
 from havolib.edge_of_chaos import edge_of_chaos_score
 
 
@@ -236,20 +239,31 @@ class AnalysisReport:
         return "\n".join(lines)
 
     def export(self, path: str) -> None:
-        """Export to CSV (or JSON if .json extension)."""
+        """Export to CSV (or JSON if .json extension).
+
+        Exports full-length arrays consistent with n_samples reported in summary().
+        """
         path = Path(path)
-        if path.suffix == ".json":
-            export_json(str(path), {
-                "max_forcing": self.max_forcing,
-                "n_risk_events": self.n_risk_events,
-                "lyapunov_exponent": self.lyapunov_exponent,
-                "edge_score": self.edge_score,
-            })
-        else:
-            if self.forcing is not None:
-                t = np.arange(len(self.forcing))
-                r = self.risk if self.risk is not None else np.zeros(len(self.forcing))
-                export_csv(str(path), t, self.forcing, r)
+        n = self.n_samples
+
+        if self.forcing is not None:
+            t = np.arange(n)
+            # Pad arrays to full length if shorter
+            f_out = self.forcing[:n] if len(self.forcing) >= n else np.pad(self.forcing, (0, max(0, n - len(self.forcing))))
+            r_out = (self.risk[:n] if self.risk is not None and len(self.risk) >= n
+                     else np.pad(self.risk, (0, max(0, n - len(self.risk)))) if self.risk is not None
+                     else np.zeros(n))
+
+            if path.suffix == ".json":
+                export_json(str(path), {
+                    "n_samples": n, "max_forcing": self.max_forcing,
+                    "n_risk_events": self.n_risk_events,
+                    "lyapunov_exponent": self.lyapunov_exponent,
+                    "edge_score": self.edge_score,
+                    "forcing": f_out, "risk": r_out,
+                })
+            else:
+                export_csv(str(path), t, f_out, r_out.astype(int))
 
     def to_dict(self) -> Dict[str, Any]:
         return {k: v for k, v in self.__dict__.items()
@@ -287,7 +301,7 @@ def analyze(
 
     # HAVOK pipeline
     if show_progress:
-        print(f"Running HAVOK on '{label}' ({len(x):,} samples)...", end=" ")
+        logger.info(f"Running HAVOK on '{label}' ({len(x):,} samples)...")
 
     t0 = time.perf_counter()
     pipe = HavokPipeline(tau=tau, m=m, r=r, threshold_std=threshold_std, window=window)
@@ -295,7 +309,7 @@ def analyze(
     elapsed = time.perf_counter() - t0
 
     if show_progress:
-        print(f"done in {elapsed:.2f}s")
+        logger.info(f"HAVOK done in {elapsed:.2f}s")
 
     forcing = pipe.get_forcing()
     risk = pipe.get_risk()

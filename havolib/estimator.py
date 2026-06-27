@@ -207,7 +207,7 @@ class HavokEstimator(BaseEstimator, TransformerMixin):
         # SVD decomposition
         from havolib.decomposition import eigen_time_delay
         r_eff = min(self.r, H.shape[1] - 1)
-        V, s = eigen_time_delay(H, r_eff)
+        V, s = eigen_time_delay(H, r_eff, solver=self.svd_solver)
         self.eigen_coords_ = V
         self.singular_values_ = s
 
@@ -236,23 +236,27 @@ class HavokEstimator(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X: np.ndarray) -> np.ndarray:
-        """Return the fitted forcing signal.
+    def transform(self, X: Optional[np.ndarray] = None) -> np.ndarray:
+        """Return the fitted forcing signal. Calls `get_forcing()` internally.
 
-        Note: This is a stateful transformer — transform() returns the forcing
-        from the training data, not a transform of new X. To analyze new data,
-        call fit_transform() or fit() then transform() on the SAME data.
+        WARNING: This is NOT a true sklearn transformer — it ignores X and
+        returns results from the training data. For sklearn compliance,
+        use `fit_transform(X)` to get forcing for the same data.
+        To analyze NEW data, call `fit(new_X).get_forcing()` instead.
 
-        Parameters
-        ----------
-        X : array-like — ignored (exists for sklearn compatibility).
-
-        Returns
-        -------
-        forcing : ndarray of shape (n_samples,)
+        Prefer `get_forcing()` for clarity.
         """
+        return self.get_forcing()
+
+    def get_forcing(self) -> np.ndarray:
+        """Return the fitted forcing signal."""
         check_is_fitted(self, "forcing_")
         return self.forcing_
+
+    def get_risk(self) -> np.ndarray:
+        """Return the fitted regime-shift risk (0 or 1)."""
+        check_is_fitted(self, "risk_")
+        return self.risk_
 
     def fit_transform(
         self, X: np.ndarray, y=None, t=None, **fit_params
