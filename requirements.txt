@@ -1,10 +1,22 @@
+# HAVOK Toolbox v0.7.0
+# Install: pip install -e ".[all]"
+# See pyproject.toml for categorized optional dependencies
+
 numpy>=1.21
 scipy>=1.7
 pandas>=1.3
+pyyaml>=6.0
+click>=8.0
 scikit-learn>=1.0
 plotly>=5.0
-streamlit>=1.10
-click>=8.0
-pyyaml
-ruptures
-pytest
+streamlit>=1.25
+ruptures>=1.1
+
+# Optional extras
+# pip install -e ".[streaming]"  → MQTT
+# pip install -e ".[gpu]"        → CuPy
+# pip install -e ".[eeg]"        → EDF/MNE
+# pip install -e ".[automl]"     → Optuna
+# pip install -e ".[fast]"       → Polars
+# pip install -e ".[torch]"      → PyTorch (hybrid model)
+# pip install -e ".[all]"        → everything

@@ -70,3 +70,9 @@ temp/
 htmlcov/
 .tox/
 .pytest_cache/
+
+# Large generated assets
+lorenz_demo.html
+eeg_havok_demo.gif
+github_repo.png
+arena_results/

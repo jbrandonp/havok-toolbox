@@ -1,4 +1,4 @@
-# HAVOK Regime-Shift Detector v0.5.0
+# HAVOK Regime-Shift Detector v0.7.0
 
 **Turn chaos into early-warning signals.**
 
@@ -6,7 +6,7 @@ Implementation of the HAVOK algorithm from *"Chaos as an Intermittently Forced L
 
 Given any univariate time series, HAVOK extracts the hidden intermittent forcing signal that precedes sudden regime shifts (seizures, crashes, tipping points, etc.).
 
-## What's New in v0.5.0 🚀
+## What's New in v0.7.0 🚀
 
 - **sklearn-compatible** `HavokEstimator` — `fit() / transform() / predict_risk() / score()`
 - **User analysis tools** — `analyze()` one-liner, `batch_analyze()`, `suggest_and_explain()`
@@ -111,7 +111,7 @@ havok-toolbox/
 │   ├── app.py             # Batch analysis dashboard
 │   └── engine_dashboard.py # Live streaming dashboard
 ├── data/                  # Sample CSVs + EDF
-├── tests/                 # 146 tests (property-based + Hypothesis)
+├── tests/                 # 146 tests (property-based + Hypothesis) — v0.7.0 adds Adaptive HAVOK, Hybrid Transformer, Federated Learning, Attribution, Arena
 └── .github/workflows/     # CI
 ```
 
