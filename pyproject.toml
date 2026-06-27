@@ -26,7 +26,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+all = ["havok-toolbox[streaming,progress,gpu,full]"]
+streaming = ["paho-mqtt>=2.0"]
+progress = ["tqdm>=4.66"]
+gpu = ["cupy-cuda12x>=13.0"]
+eeg = ["pyedflib>=0.1", "mne>=1.6"]
+full = ["havok-toolbox[streaming,progress,gpu,eeg]"]
+dev = ["pytest", "hypothesis>=6.100"]
 
 [project.scripts]
 havok = "_cli_havok:cli"
@@ -40,4 +46,4 @@ packages = ["havolib", "havolib.engine"]
 
 [project.urls]
 Homepage = "https://github.com/jbrandonp/havok-toolbox"
-Documentation = "README.md"
+Documentation = "https://github.com/jbrandonp/havok-toolbox#readme"

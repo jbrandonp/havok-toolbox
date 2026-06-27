@@ -1,19 +1,23 @@
 """
 Alert Pipeline — routing, cooldown, and deduplication for HAVOK alerts.
 
-Handles:
-- Alert routing to multiple targets (Telegram, webhook, Discord, dashboard)
-- Per-stream cooldown to avoid alert storms
-- Deduplication of identical alerts
-- Escalation: repeat critical alerts after cooldown
+Built-in handlers: stdout (always available).
+Extensible: register_handler("webhook", your_async_fn) for webhook/telegram/discord.
+
+Usage:
+    pipeline = AlertPipeline()
+    pipeline.add_target("console", AlertTarget(type="stdout"))
+    pipeline.register_handler("webhook", my_webhook_handler)  # optional
 """
 
 import time
-import json
+import logging
 from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import asyncio
+
+logger = logging.getLogger("havok.engine.alerts")
 
 
 class AlertLevel(Enum):
@@ -25,139 +29,102 @@ class AlertLevel(Enum):
 @dataclass
 class AlertTarget:
     """Configuration for an alert delivery target."""
-    type: str  # "telegram", "webhook", "discord", "stdout", "dashboard"
+    type: str  # "stdout", "webhook", "telegram", "discord", "dashboard"
     config: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class AlertRule:
-    """Rule defining when to fire an alert for a stream."""
-    stream_id: str
-    condition: str  # "risk > 0.7", "risk > 0.5 AND surge > 0.6"
-    level: AlertLevel = AlertLevel.WARNING
+    """Rule that triggers an alert when risk exceeds threshold."""
+    name: str
+    risk_threshold: float = 0.7
     cooldown_seconds: float = 60.0
-    targets: List[str] = field(default_factory=list)  # target names
-    message_template: str = "Alert: {stream} risk={risk:.2f} level={level}"
+    level: AlertLevel = AlertLevel.WARNING
+    message_template: str = "[{level}] Stream {stream}: risk={risk:.3f}"
 
 
 class AlertPipeline:
-    """Manages alert routing with cooldown and dedup.
-
-    Usage:
-        pipeline = AlertPipeline()
-        pipeline.add_target("telegram", AlertTarget(type="telegram", config={"chat": "@alerts"}))
-        pipeline.add_rule(AlertRule("eeg_1", "risk > 0.7", AlertLevel.CRITICAL, 30.0, ["telegram"]))
-        await pipeline.check("eeg_1", 0.85, {"surge": 0.9})
-    """
+    """Routes risk scores to alert targets with cooldown and dedup."""
 
     def __init__(self):
         self._targets: Dict[str, AlertTarget] = {}
-        self._rules: Dict[str, List[AlertRule]] = {}
-        self._last_fired: Dict[str, float] = {}  # stream_id -> timestamp
         self._handlers: Dict[str, Callable] = {}
+        self._last_fired: Dict[str, float] = {}
+        self._rules: Dict[str, AlertRule] = {}
+        self._register_builtins()
 
     def add_target(self, name: str, target: AlertTarget) -> None:
         self._targets[name] = target
 
-    def add_rule(self, rule: AlertRule) -> None:
-        if rule.stream_id not in self._rules:
-            self._rules[rule.stream_id] = []
-        self._rules[rule.stream_id].append(rule)
+    def register_handler(self, target_type: str, handler: Callable) -> None:
+        """Register an async handler for a target type.
 
-    def set_handler(self, target_type: str, handler: Callable) -> None:
-        """Register an async handler function for a target type."""
+        Handler signature: async def handler(alert: dict, config: dict) -> None
+        """
         self._handlers[target_type] = handler
 
-    async def check(
-        self,
-        stream_id: str,
-        risk: float,
-        details: Optional[Dict[str, float]] = None,
-        current_time: Optional[float] = None,
-    ) -> List[Dict]:
-        """Check rules and fire alerts if conditions are met.
+    def _register_builtins(self) -> None:
+        """Auto-register stdout handler. Other targets need user handlers."""
+        self._handlers["stdout"] = self._deliver_stdout
 
-        Returns list of fired alert dicts.
-        """
-        if current_time is None:
-            current_time = time.time()
+    async def _deliver_stdout(self, alert: Dict, config: Dict) -> None:
+        level = alert.get("level", "?")
+        msg = alert.get("message", "")[:200]
+        logger.info(f"ALERT [{level}] {msg}")
 
-        rules = self._rules.get(stream_id, [])
+    def add_rule(self, name_or_rule, rule: AlertRule = None) -> None:
+        """Add an alert rule. Accepts add_rule(name, rule) or add_rule(rule)."""
+        if rule is None and isinstance(name_or_rule, AlertRule):
+            rule = name_or_rule
+            name = rule.name
+        elif rule is not None:
+            name = name_or_rule
+        else:
+            raise TypeError("add_rule requires (name, rule) or (rule,)")
+        self._rules[name] = rule
+
+    async def evaluate(self, stream_id: str, risk: float) -> List[Dict]:
+        """Evaluate risk against all rules, fire alerts if thresholds exceeded."""
         fired = []
+        for rule_name, rule in self._rules.items():
+            if risk >= rule.risk_threshold:
+                cooldown_key = f"{stream_id}:{rule.name}"
+                now = time.time()
+                last = self._last_fired.get(cooldown_key, 0)
+                if now - last < rule.cooldown_seconds:
+                    continue
+                self._last_fired[cooldown_key] = now
 
-        for rule in rules:
-            if not self._evaluate(rule, risk, details):
-                continue
+                alert = {
+                    "stream": stream_id,
+                    "risk": risk,
+                    "level": rule.level.value,
+                    "timestamp": now,
+                    "message": rule.message_template.format(
+                        stream=stream_id, risk=risk, level=rule.level.value),
+                }
 
-            # Cooldown check
-            last_key = f"{stream_id}:{rule.level.value}"
-            last = self._last_fired.get(last_key, 0)
-            if current_time - last < rule.cooldown_seconds:
-                continue
+                for target_name, target in self._targets.items():
+                    await self._dispatch(target_name, alert, rule)
 
-            # Fire alert
-            alert = {
-                "stream": stream_id,
-                "risk": risk,
-                "level": rule.level.value,
-                "timestamp": current_time,
-                "details": details or {},
-            }
-
-            for target_name in rule.targets:
-                alert["target"] = target_name
-                await self._dispatch(target_name, alert, rule)
-
-            self._last_fired[last_key] = current_time
-            fired.append(alert)
-
+                fired.append(alert)
         return fired
-
-    def _evaluate(self, rule: AlertRule, risk: float, details: Optional[Dict]) -> bool:
-        """Simple condition evaluator. Supports 'risk > X' and 'X > Y AND Z > W'."""
-        ctx = {"risk": risk}
-        if details:
-            ctx.update(details)
-
-        try:
-            parts = rule.condition.replace(" AND ", " and ").split(" and ")
-            for part in parts:
-                part = part.strip()
-                if ">" in part:
-                    var, val = part.split(">")
-                    var = var.strip()
-                    val = float(val.strip())
-                    if ctx.get(var, 0) <= val:
-                        return False
-                elif "<" in part:
-                    var, val = part.split("<")
-                    var = var.strip()
-                    val = float(val.strip())
-                    if ctx.get(var, 0) >= val:
-                        return False
-            return True
-        except Exception:
-            # Fallback: just check risk threshold
-            return risk > 0.5
 
     async def _dispatch(self, target_name: str, alert: Dict, rule: AlertRule) -> None:
         """Deliver alert to the specified target."""
         target = self._targets.get(target_name)
         if target is None:
-            print(f"[AlertPipeline] Unknown target: {target_name}")
+            logger.warning(f"Unknown alert target: {target_name}")
             return
 
-        handler = self._handlers.get(target.type)
+        # Try registered handler, fall back to stdout
+        handler_key = target.type
+        handler = self._handlers.get(handler_key, self._handlers.get("stdout"))
+
         if handler:
             try:
                 await handler(alert, target.config)
             except Exception as e:
-                print(f"[AlertPipeline] Dispatch failed ({target_name}): {e}")
+                logger.error(f"Alert dispatch failed ({target_name}): {e}")
         else:
-            # Default: print to stdout
-            msg = rule.message_template.format(
-                stream=alert["stream"],
-                risk=alert["risk"],
-                level=alert["level"],
-            )
-            print(f"[ALERT:{alert['level'].upper()}] {msg} → {target_name}")
+            logger.warning(f"No handler for target type '{target.type}' — alert dropped")

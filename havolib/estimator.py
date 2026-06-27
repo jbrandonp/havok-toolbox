@@ -237,11 +237,15 @@ class HavokEstimator(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X: np.ndarray) -> np.ndarray:
-        """Return the forcing signal.
+        """Return the fitted forcing signal.
+
+        Note: This is a stateful transformer — transform() returns the forcing
+        from the training data, not a transform of new X. To analyze new data,
+        call fit_transform() or fit() then transform() on the SAME data.
 
         Parameters
         ----------
-        X : array-like of shape (n_samples,) — ignored (uses fitted forcing).
+        X : array-like — ignored (exists for sklearn compatibility).
 
         Returns
         -------

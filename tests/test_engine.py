@@ -157,35 +157,35 @@ class TestRiskEngine:
         assert set(details.keys()) == {"surge", "trend", "cluster", "significance"}
 
 
-# ── AlertPipeline ───────────────────────────────────────────
 class TestAlertPipeline:
     def test_fires_alert(self):
         import asyncio
         async def _test():
             pipeline = AlertPipeline()
             pipeline.add_target("stdout", AlertTarget(type="stdout"))
-            pipeline.add_rule(AlertRule("test", "risk > 0.5", AlertLevel.WARNING, 0.0, ["stdout"]))
-            return await pipeline.check("test", 0.8)
+            pipeline.add_rule(AlertRule(name="test", risk_threshold=0.5, cooldown_seconds=0.0, level=AlertLevel.WARNING))
+            return await pipeline.evaluate("test", 0.8)
         fired = asyncio.run(_test())
         assert len(fired) == 1
+        assert fired[0]["stream"] == "test"
 
     def test_cooldown_prevents_refire(self):
         import asyncio
         async def _test():
             pipeline = AlertPipeline()
             pipeline.add_target("stdout", AlertTarget(type="stdout"))
-            pipeline.add_rule(AlertRule("test", "risk > 0.5", AlertLevel.WARNING, 999.0, ["stdout"]))
-            await pipeline.check("test", 0.8)
-            return await pipeline.check("test", 0.9)
+            pipeline.add_rule(AlertRule(name="test", risk_threshold=0.5, cooldown_seconds=999.0, level=AlertLevel.WARNING))
+            await pipeline.evaluate("test", 0.8)
+            return await pipeline.evaluate("test", 0.9)
         fired = asyncio.run(_test())
-        assert len(fired) == 0  # cooldown active
+        assert len(fired) == 0  # cooldown prevents refire
 
     def test_condition_not_met_no_alert(self):
         import asyncio
         async def _test():
             pipeline = AlertPipeline()
             pipeline.add_target("stdout", AlertTarget(type="stdout"))
-            pipeline.add_rule(AlertRule("test", "risk > 0.9", AlertLevel.CRITICAL, 0.0, ["stdout"]))
-            return await pipeline.check("test", 0.3)
+            pipeline.add_rule(AlertRule(name="test", risk_threshold=0.9, cooldown_seconds=0.0, level=AlertLevel.CRITICAL))
+            return await pipeline.evaluate("test", 0.3)
         fired = asyncio.run(_test())
         assert len(fired) == 0

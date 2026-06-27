@@ -1,8 +1,11 @@
 import numpy as np
+import logging
 from .embedding import hankel_matrix
 from .decomposition import eigen_time_delay
 from .forcing import extract_forcing
 from .detection import threshold_risk
+
+logger = logging.getLogger("havok.pipeline")
 from .auto_tune import suggest_parameters
 from .config import (
     DEFAULT_TAU, DEFAULT_M, DEFAULT_R,
@@ -73,11 +76,11 @@ class HavokPipeline:
                 outlier_method=self.outlier_method,
                 detrend=self.detrend
             )
-            print("[HAVOK] Pre-processing applied (interpolate/outlier/smooth).")
+            logger.info("Pre-processing applied (interpolate/outlier/smooth).")
 
         # Basic length sanity check (per deeper layer guidance)
         if len(x) < 10 * self.m:
-            print(f"[HAVOK WARNING] Data length {len(x)} may be too short for m={self.m} (recommend >10*m).")
+            logger.warning(f"Data length {len(x)} may be too short for m={self.m} (recommend >10*m).")
 
         H = hankel_matrix(x, self.m, self.tau)
         t_hankel = t[:H.shape[0]]
@@ -140,7 +143,7 @@ class HavokPipeline:
         params = self.suggest_parameters(x_for_params, max_lag=max_lag, max_m=max_m)
         self.tau = params["tau"]
         self.m = params["m"]
-        print(f"[HAVOK] Auto-selected tau={self.tau}, m={self.m} via Mutual Information")
+        logger.info(f"Auto-selected tau={self.tau}, m={self.m} via Mutual Information")
         return self.fit(t, x)
 
     def validate_with_surrogates(self, n_surrogates: int = 100, alpha: float = 0.01, seed: int = 42) -> dict:
@@ -167,7 +170,7 @@ class HavokPipeline:
                 detrend=self.detrend
             )
 
-        print(f"[HAVOK] Running {n_surrogates} phase-randomized surrogates for statistical validation...")
+        logger.info(f"Running {n_surrogates} phase-randomized surrogates for statistical validation...")
         surr_maxes, thresh = surrogate_forcing_distribution(
             self.x_, make_pipe, n_surrogates=n_surrogates, seed=seed
         )
@@ -186,7 +189,7 @@ class HavokPipeline:
             "recommendation": "Significant intermittent forcing detected (likely real regime-shift driver)."
                           if self.is_significant_ else "Forcing not statistically significant vs linear surrogates."
         }
-        print(f"[HAVOK] Surrogate validation: p={self.p_value_:.3f}, 99% thresh={thresh:.4f}, significant={self.is_significant_}")
+        logger.info(f"Surrogate validation: p={self.p_value_:.3f}, 99% thresh={thresh:.4f}, significant={self.is_significant_}")
         return result
 
     def get_surrogate_threshold(self) -> float:

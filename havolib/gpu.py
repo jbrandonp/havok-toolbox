@@ -65,7 +65,7 @@ def svd(H: np.ndarray, full_matrices: bool = False, r: Optional[int] = None):
     if _GPU_AVAILABLE:
         H_gpu = _xp.asarray(H)
         U_gpu, s_gpu, Vt_gpu = _xp.linalg.svd(H_gpu, full_matrices=full_matrices)
-        U, s, Vt = _xp.asnumpy(U_gpu), _xp.asnumpy(s_gpu), _xp.asnumpy(Vt_gpu)
+        U, s, Vt = U_gpu.get(), s_gpu.get(), Vt_gpu.get()
     else:
         from scipy.linalg import svd as scipy_svd
         U, s, Vt = scipy_svd(H, full_matrices=full_matrices)
@@ -83,7 +83,7 @@ def lstsq(A: np.ndarray, b: np.ndarray, rcond: Optional[float] = None):
         A_gpu = _xp.asarray(A)
         b_gpu = _xp.asarray(b)
         x_gpu, residuals_gpu, rank_gpu, s_gpu = _xp.linalg.lstsq(A_gpu, b_gpu, rcond=rcond)
-        return _xp.asnumpy(x_gpu), _xp.asnumpy(residuals_gpu) if residuals_gpu.size else residuals_gpu, int(rank_gpu), _xp.asnumpy(s_gpu)
+        return x_gpu.get(), residuals_gpu.get() if residuals_gpu.size else residuals_gpu, int(rank_gpu), s_gpu.get()
     else:
         from numpy.linalg import lstsq as np_lstsq
         return np_lstsq(A, b, rcond=rcond)
@@ -93,7 +93,7 @@ def norm(x: np.ndarray) -> float:
     """Vector 2-norm — GPU if available."""
     _detect_gpu()
     if _GPU_AVAILABLE:
-        return float(_xp.linalg.norm(_xp.asarray(x)).get())
+        return float(_xp.linalg.norm(_xp.asarray(x)).get().item())
     return float(np.linalg.norm(x))
 
 
@@ -101,5 +101,5 @@ def eigvals(W: np.ndarray) -> np.ndarray:
     """Eigenvalues — GPU if available."""
     _detect_gpu()
     if _GPU_AVAILABLE:
-        return _xp.asnumpy(_xp.linalg.eigvals(_xp.asarray(W)))
+        return _xp.linalg.eigvals(_xp.asarray(W)).get()
     return np.linalg.eigvals(W)

@@ -7,10 +7,13 @@ O(N * m²) per batch, amortized O(m²) per point with large stride.
 """
 
 import numpy as np
+import logging
 from numpy.linalg import lstsq
 from typing import Optional, Tuple
 
 from .ring_buffer import RingBuffer
+
+logger = logging.getLogger("havok.engine.incremental")
 
 
 class IncrementalHAVOK:
@@ -100,8 +103,8 @@ class IncrementalHAVOK:
                     self._forcing_buffer.push(float(f))
 
                 self._last_forcing = float(forcing_full[-1])
-        except Exception:
-            pass  # not enough data yet
+        except Exception as e:
+            logger.warning(f"Batch SVD/Hankel recompute failed: {e} — forcing will be stale until next successful batch")  # not enough data yet
 
     def _compute_risk(self) -> float:
         """Compute risk score from forcing buffer."""
