@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project specific generated outputs (uncomment if you don't want to commit demos)
+# *.html
+# *.gif
+
+# Data - large or personal
+data/chbmit/*.edf
+# Keep the small csv samples
+
+# External research - if you want to ignore sub-clones (they are references)
+# external/**/.git
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets / env
+.env
+*.env
+secrets/
+*.key
+*.pem
+
+# Logs / temp
+*.log
+logs/
+tmp/
+temp/
+
+# Test / coverage
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
