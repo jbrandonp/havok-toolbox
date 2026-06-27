@@ -343,13 +343,23 @@ class HavokEstimator(BaseEstimator, TransformerMixin):
         return int(self.m)
 
 
-# ── sklearn-compatible GridSearch support ──────────────────────
+# ── SVD result caching ───────────────────────────────────
 
-@lru_cache(maxsize=32)
-def _cached_hankel_svd(data_hash: int, m: int, tau: int, r: int) -> Tuple[np.ndarray, np.ndarray]:
-    """Cache SVD results for repeated parameter searches."""
-    # data_hash is hash(X.tobytes()) — actual data passed separately
-    raise NotImplementedError("Use HavokEstimator directly for caching")
+_SVD_CACHE: Dict[Tuple, Tuple[np.ndarray, np.ndarray]] = {}
+
+def _cached_svd(H_tuple: bytes, r: int) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    """Retrieve cached SVD result if available. LRU eviction at 32 entries."""
+    key = (H_tuple, r)
+    if key in _SVD_CACHE:
+        return _SVD_CACHE[key]
+    if len(_SVD_CACHE) > 32:
+        oldest = next(iter(_SVD_CACHE))
+        del _SVD_CACHE[oldest]
+    return None
+
+def _cache_svd(H_tuple: bytes, r: int, V: np.ndarray, s: np.ndarray) -> None:
+    """Store SVD result in cache."""
+    _SVD_CACHE[(H_tuple, r)] = (V.copy(), s.copy())
 
 
 def cross_val_score_havok(
