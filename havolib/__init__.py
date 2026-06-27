@@ -38,5 +38,7 @@ from .user import analyze, AnalysisReport, batch_analyze, suggest_and_explain
 from .multichannel import MultichannelHAVOK, MultichannelResult
 from .automl import auto_optimize, suggest_from_automl
 from .polars_loader import load_csv_fast, load_parquet_fast, batch_load_csvs
+from .adaptive import AdaptiveHAVOK, AdaptiveResult
+from .attribution import explain_forcing_spike
 
 __version__ = "0.6.0"
