@@ -352,7 +352,7 @@ def _cached_svd(H_tuple: bytes, r: int) -> Optional[Tuple[np.ndarray, np.ndarray
     key = (H_tuple, r)
     if key in _SVD_CACHE:
         return _SVD_CACHE[key]
-    if len(_SVD_CACHE) > 32:
+    if len(_SVD_CACHE) >= 33:
         oldest = next(iter(_SVD_CACHE))
         del _SVD_CACHE[oldest]
     return None
