@@ -29,10 +29,10 @@ dependencies = [
 dev = ["pytest"]
 
 [project.scripts]
-havok = "cli:cli"
+havok = "_cli_havok:cli"
 
 [tool.setuptools]
-py-modules = ["cli"]
+py-modules = ["_cli_havok"]
 packages = ["havolib", "havolib.engine"]
 
 [tool.setuptools.package-data]

@@ -336,13 +336,14 @@ def engine_init():
 @cli.command("benchmark")
 @click.option("--datasets", "-d", multiple=True, help="Dataset names (repeatable).")
 @click.option("--methods", "-m", multiple=True, help="Method names (repeatable).")
-def benchmark_cmd(datasets, methods):
+@click.option("--quiet", "-q", is_flag=True, help="Suppress per-dataset output.")
+def benchmark_cmd(datasets, methods, quiet):
     """Benchmark HAVOK vs baselines on regime-shift datasets."""
     from benchmark.runner import run_benchmark, print_summary
     ds = list(datasets) if datasets else None
     ms = list(methods) if methods else None
     click.echo("🚀 HAVOK Benchmark — Regime-Shift Detection")
-    results = run_benchmark(datasets=ds, methods=ms, verbose=True)
+    results = run_benchmark(datasets=ds, methods=ms, verbose=not quiet)
     print_summary(results)
 
 
