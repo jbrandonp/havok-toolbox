@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.9+-green" alt="Python">
-  <img src="https://img.shields.io/badge/tests-795%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-803%20passed-brightgreen" alt="Tests">
     <img src="https://img.shields.io/badge/coverage-65%25-yellow" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License">
   <img src="https://img.shields.io/badge/pip%20install-ready-success" alt="pip install">
@@ -116,6 +116,7 @@ pip install havok-toolbox[fast]        # Polars (10-50× CSV loading)
 pip install havok-toolbox[eeg]         # EDF/MNE support
 pip install havok-toolbox[torch]       # HAVOK-Transformer
 pip install havok-toolbox[app]         # Streamlit dashboard
+pip install havok-toolbox[sindy]       # SINDy model support
 pip install havok-toolbox[all]         # Everything
 pip install havok-toolbox[dev]         # Tests + Hypothesis
 
@@ -415,6 +416,8 @@ pytest tests/ -v
 
 ### v0.3.0 — First Stable Release
 
+- **Multi-model platform**: `ModelRegistry` + `BaseRegimeModel` — pluggable architecture. Switch models via `model_type="sindy"`. Includes HAVOK (native) and SINDy (conditional) wrappers with `@ModelRegistry.register()`. See CONTRIBUTING.md for extension guide.
+- **Industrial test suite**: 803 tests (was 286) — 480 parametrized, 30 Hypothesis property-based, concurrency, memory, fault injection.
 - **Engineering hardening**: YAML config validation with clear error messages; CuPy import failure now logs actionable warning instead of silent fallback; `free_gpu_memory()` prevents pool fragmentation in long-running processes; `numpy<2.0` pinned to prevent NumPy 2.x ABI breakage.
 - **Paper compliance audit**: SVD coordinate flow verified — code is mathematically correct. Full Paper Correspondence section in README with compliance matrix, heuristic justification, and post-paper extension catalog. `eigen_time_delay()` docstring now explains numpy U vs paper V(t) naming convention.
 - **Scientific validation**: `test_forcing_sparsity_on_clean_lorenz` verifies HAVOK intermittency (p99/p90 > 1.5, max/median > 7). `test_svd_solver_equivalence` confirms randomized SVD matches exact within 1% tolerance.
