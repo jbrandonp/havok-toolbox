@@ -193,6 +193,29 @@ Golden-value regression tests verify Lorenz forcing stability across versions.
 
 ---
 
+## 🔌 Multi-Model Platform
+
+HAVOK is the native engine, but the pipeline is model-agnostic. Switch models
+via the `model_type` config field.
+
+| Model | Key | Install | Description |
+|-------|-----|---------|-------------|
+| **HAVOK** | `"havok"` | built-in | Hankel + Koopman (Brunton 2017) |
+| **SINDy** | `"sindy"` | `pip install havok-toolbox[sindy]` | Sparse identification of nonlinear dynamics |
+
+```python
+# Switch model via config
+config = HavokParams(model_type="havok")  # or "sindy"
+pipeline = HavokPipeline(config)
+
+# Add your own model
+from havolib.models import BaseRegimeModel, ModelRegistry
+@ModelRegistry.register("my_model")
+class MyModel(BaseRegimeModel): ...
+```
+
+---
+
 ## 📁 Project Structure
 
 ```

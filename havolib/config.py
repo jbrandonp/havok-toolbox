@@ -52,6 +52,9 @@ class HavokParams:
     r: int = 5
     threshold_std: float = 3.0
     window: int = 100
+    # Multi-model support
+    model_type: str = "havok"
+    model_params: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.tau < 1:
