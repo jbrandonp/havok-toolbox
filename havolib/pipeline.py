@@ -248,18 +248,26 @@ class HavokPipeline:
 
     def validate_with_surrogates(self, n_surrogates: int = 100, alpha: float = 0.01, seed: int = 42) -> dict:
         """
-        Run phase-randomized (Fourier) surrogate test (deeper layer statistical validation).
+        Run phase-randomized (Fourier) surrogate test for statistical validation.
 
-        This is the key to knowing whether forcing spikes are real or just autocorrelation.
+        Tests whether forcing spikes are significant vs a linear-stochastic null
+        hypothesis, following Theiler et al. 1992.
+
+        Statistical assumption
+        ----------------------
+        Surrogates reuse the SAME tau, m, r parameters tuned on the original
+        signal.  Surrogate data has different correlation structure by
+        construction, so these parameters may not be optimal for every
+        surrogate.  This biases the null distribution toward conservative
+        p-values (fewer false positives, more false negatives).  For rigorous
+        hypothesis testing, re-run auto-tune per surrogate — computationally
+        expensive but statistically correct.
 
         Parameters
         ----------
-        n_surrogates : int
-            Number of surrogates.
-        alpha : float
-            Significance level.
-        seed : int
-            RNG seed.
+        n_surrogates : int — number of surrogates (100+ recommended)
+        alpha : float — significance level
+        seed : int — RNG seed for reproducibility
         """
         if self.forcing_ is None or self.x_raw_ is None:
             raise RuntimeError("Call fit() or auto_fit() first before surrogate validation.")

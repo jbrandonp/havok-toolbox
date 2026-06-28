@@ -64,3 +64,51 @@ class TestRegression:
             assert np.array_equal(loaded["arrays"]["forcing"], arr)
         finally:
             os.unlink(tmp)
+
+    def test_forcing_sparsity_on_clean_lorenz(self):
+        """Scientific: on clean Lorenz with good params, forcing should be sparse/bursty.
+
+        HAVOK's central claim is that forcing is INTERMITTENT — mostly near-zero
+        with rare large excursions.  On clean Lorenz data the linear model
+        captures ~99% of dynamics, so the forcing is noise-level most of the
+        time.  This test verifies that forcing sparsity is preserved.
+        """
+        _, x = generate_lorenz(n_points=4000)
+        est = HavokEstimator(tau=1, m=50, r=5)
+        est.fit(x)
+        f = np.abs(est.forcing_)
+
+        # Most forcing values should be near the noise floor
+        f_sorted = np.sort(f)
+        p90 = f_sorted[int(0.90 * len(f))]
+        p99 = f_sorted[int(0.99 * len(f))]
+
+        # p99 should be visibly larger than p90 (moderately heavy-tailed)
+        assert p99 > p90 * 1.5, \
+            f"Forcing tail too thin: p99/p90 = {p99/p90:.2f} (expected > 1.5)"
+
+        # Max should be well above median (intermittency)
+        median = f_sorted[len(f)//2]
+        max_f = f_sorted[-1]
+        assert max_f > median * 7.0, \
+            f"Forcing not intermittent enough: max/median = {max_f/median:.1f} (expected > 7)"
+
+    def test_svd_solver_equivalence(self):
+        """SciPy exact SVD and sklearn randomized SVD should produce similar forcing."""
+        _, x = generate_lorenz(n_points=3000)
+        est_exact = HavokEstimator(tau=1, m=50, r=5, random_state=42)
+        est_exact._solver_override = "scipy"
+        est_exact.fit(x)
+        f_exact = est_exact.forcing_
+
+        est_rand = HavokEstimator(tau=1, m=50, r=5, random_state=42)
+        # Force randomized path
+        est_rand.decomposition_kwargs = {"solver": "randomized"}
+        est_rand.fit(x)
+        f_rand = est_rand.forcing_
+
+        # Mean absolute difference should be negligible
+        diff = np.mean(np.abs(f_exact - f_rand))
+        threshold = np.std(f_exact) * 0.01  # within 1% of signal std
+        assert diff < max(threshold, 1e-8), \
+            f"SVD solver difference {diff:.2e} exceeds tolerance {threshold:.2e}"
