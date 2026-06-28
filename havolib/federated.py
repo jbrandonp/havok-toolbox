@@ -5,7 +5,7 @@ Enables multiple hospitals/institutions to jointly train HAVOK models
 without sharing raw data. Uses Federated Averaging (FedAvg) with
 differential privacy guarantees.
 
-This is the Phase 2 moat feature — regulatory compliance (HIPAA, GDPR).
+This feature targets regulatory compliance (HIPAA, GDPR).
 
 Usage:
     from havolib.federated import FederatedHAVOK, ClientData

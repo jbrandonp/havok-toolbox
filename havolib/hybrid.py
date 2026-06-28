@@ -10,7 +10,7 @@ Architecture:
 3. Neural ODE decoder predicts future V(t+dt)
 4. Forcing extraction on predicted V → regime-shift risk forecast
 
-This is the Phase 1 moat feature — no competitor has HAVOK+Transformer.
+No competitor has HAVOK+Transformer.
 
 Usage:
     from havolib.hybrid import HavokTransformer

@@ -1,5 +1,5 @@
 """
-Unified configuration system for HAVOK — CERN-grade.
+Unified configuration system for HAVOK.
 
 Uses dataclasses with strict validation, YAML serialization,
 and JSON Schema export for external tooling.

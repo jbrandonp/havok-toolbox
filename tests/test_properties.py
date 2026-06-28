@@ -1,4 +1,4 @@
-"""Property-based tests for HAVOK — CERN-grade invariant checking.
+"""Property-based tests for HAVOK — invariant checking via Hypothesis.
 
 Uses Hypothesis to test mathematical properties that should always hold.
 Run: pytest tests/test_properties.py -v

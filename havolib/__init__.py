@@ -1,5 +1,5 @@
 """
-HAVOK Regime-Shift Detector — CERN-grade time series analysis.
+HAVOK Regime-Shift Detector — time series analysis with early-warning regime-shift detection.
 Core library for extracting intermittent forcing signals from time series
 using time-delay embedding + SVD (Brunton et al. 2017).
 
@@ -49,4 +49,4 @@ from .uncertainty import (
     phase_randomized_surrogate, generate_surrogates, block_bootstrap, crps, conformal_interval
 )
 
-__version__ = "0.9.0"  # Production hardening + portable install + SVD auto-tune
+__version__ = "0.3.0"  # Portable install + pipeline/estimator unified + SVD auto-tune

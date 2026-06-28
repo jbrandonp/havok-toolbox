@@ -1,5 +1,5 @@
 """
-Structured logging setup for HAVOK — CERN-grade.
+Structured logging setup for HAVOK.
 
 Replaces all print() calls with proper logging.
 Call init_logging() once at startup to configure.

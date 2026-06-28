@@ -1,9 +1,9 @@
-# HAVOK Regime-Shift Detector v0.9.0
+# HAVOK Regime-Shift Detector v0.3.0
 
-> **2026 Q2 hardening**: Portable install (pip-ready), production-grade robustness fixes across all modules, SVD-spectrum auto-tune replacing broken FNN, config unification, 0 runtime crashes on edge cases.
+> Portable install, pipeline/estimator unified, auto-tune fixed, production-ready robustness.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.9.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.9+-green" alt="Python">
   <img src="https://img.shields.io/badge/tests-284%20passed-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-73%25-yellow" alt="Coverage">
@@ -259,7 +259,7 @@ pytest tests/ -v
 
 ---
 
-## 🚀 What's New (v0.9 — Production Hardening)
+## 🚀 What's New (v0.3 — First Stable Release)
 
 - **Auto-tune fixed**: `optimal_m_havok()` uses SVD spectrum instead of broken FNN. `suggest_parameters()` now returns m ≥ 15 and caps tau ≤ 10 for meaningful forcing residuals.
 - **Portable install**: `pip install havok-toolbox` works. `benchmark/` and `dashboard/` moved into `havolib/` for zero-config imports. `importlib.resources` for data files.
@@ -279,7 +279,7 @@ pytest tests/ -v
 
 ## 📄 License
 
-MIT + Commons Clause — build the revolution.
+MIT + Commons Clause.
 
 ---
 

@@ -8,7 +8,7 @@
 - data_loader.py: Good generators + chb support.
 - estimator.py (pre): sklearn facade present but with exactly the documented weaknesses (binary risk, broken transform, weak score, no CI, manual r).
 
-**Adaptive (strategic moat area):**
+**Adaptive (non-stationary area):**
 - adaptive.py: Used batch ruptures + hard segments + from-scratch tuning. Now upgraded with BOCPD, Koopman drift, memory, soft stitching.
 
 **Ambitious / plausible but shallowly validated:**

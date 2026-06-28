@@ -7,7 +7,7 @@ Major upgrade (2026): now includes
 - RegimeMemory (cross-segment meta-learning of tau/m/r)
 - Koopman spectral drift detection (regimes in latent dynamics space, not raw signal)
 
-This is the primary technical moat.
+This is the core differentiator for non-stationary signals.
 """
 
 from __future__ import annotations
