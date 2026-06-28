@@ -5,8 +5,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.9+-green" alt="Python">
-  <img src="https://img.shields.io/badge/tests-286%20passed-brightgreen" alt="Tests">
-  <img src="https://img.shields.io/badge/coverage-73%25-yellow" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-795%20passed-brightgreen" alt="Tests">
+    <img src="https://img.shields.io/badge/coverage-65%25-yellow" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License">
   <img src="https://img.shields.io/badge/pip%20install-ready-success" alt="pip install">
 </p>
@@ -331,7 +331,7 @@ streamlit run havolib/dashboard/engine_dashboard.py
 
 The test suite covers correctness, edge cases, and numerical stability:
 
-- **286 tests** passing with 73% line coverage
+- **795 tests** passing with 73% line coverage
 - **Property-based tests**🔁 via Hypothesis: SVD orthonormality, embedding isotonicity, forcing determinism
 - **Golden value tests**🏅: fixed-seed Lorenz forcing output verified across versions
 - **Edge case coverage**🛡️: empty signals, constant signals, NaN/Inf handling, very short data, single-channel, invalid parameters
