@@ -1,2 +1,3 @@
 *.csv binary
 havolib/data/chb_sample.csv -text
+havolib/data/chb_sample.csv binary
