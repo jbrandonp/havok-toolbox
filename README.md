@@ -437,7 +437,8 @@ pytest tests/ -v
 
 ## 📄 License
 
-MIT + Commons Clause.
+License: MIT + Commons Clause
+See the LICENSE file for full terms.
 
 ---
 
