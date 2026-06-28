@@ -1,0 +1,1 @@
+# Auto-generated — see pyproject.toml for canonical deps

@@ -59,8 +59,10 @@ class TestHavokEstimator:
         assert hasattr(est, "forcing_")
         assert hasattr(est, "risk_")
         assert hasattr(est, "eigen_coords_")
-        assert len(est.forcing_) == len(x)
-        assert len(est.risk_) == len(x)
+        n_skip = est.n_skip_
+        assert len(est.forcing_) == len(x) - n_skip
+        assert len(est.risk_) == len(x) - n_skip
+        assert est.n_skip_ > 0   # at least (m-1) for tau>=1
 
     def test_transform_returns_forcing(self):
         x = np.sin(np.linspace(0, 20*np.pi, 500))
@@ -73,7 +75,7 @@ class TestHavokEstimator:
         x = np.sin(np.linspace(0, 20*np.pi, 500))
         est = HavokEstimator(m=20, r=3)
         f = est.fit_transform(x)
-        assert len(f) == len(x)
+        assert len(f) == len(x) - est.n_skip_
 
     def test_score_positive_for_lorenz(self):
         _, x = generate_lorenz(n_points=2000)

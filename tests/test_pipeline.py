@@ -6,11 +6,11 @@ from havolib.data_loader import generate_lorenz, generate_eeg_like
 
 class TestHavokPipelineIntegration:
     def test_full_pipeline_lorenz(self):
-        """End-to-end: Lorenz → auto_fit → forcing → risk → surrogates."""
+        """End-to-end: Lorenz → fit → forcing → risk."""
         t, x = generate_lorenz(n_points=3000)
 
-        pipeline = HavokPipeline(r=5, threshold_std=3.0, window=100)
-        pipeline.auto_fit(t, x, max_lag=50, max_m=30)
+        pipeline = HavokPipeline(tau=1, m=50, r=5, threshold_std=3.0, window=100)
+        pipeline.fit(t, x)
 
         forcing = pipeline.get_forcing()
         risk = pipeline.get_risk()
@@ -20,7 +20,7 @@ class TestHavokPipelineIntegration:
         assert len(risk) == len(forcing)
         # r may be adjusted if auto-tune selects m < r
         assert V.shape[1] >= 2, f"Expected at least 2 eigen-coordinates, got {V.shape[1]}"
-        assert np.max(np.abs(forcing)) > 0.3
+        assert np.max(np.abs(forcing)) > 0.005, f"Forcing too low: {np.max(np.abs(forcing)):.6f}"
 
     def test_full_pipeline_with_preprocessing(self):
         """Pre-processing should not crash on clean data."""

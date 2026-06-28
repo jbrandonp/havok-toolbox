@@ -13,6 +13,8 @@ from scipy.spatial import cKDTree
 def mutual_information(x: np.ndarray, y: np.ndarray, bins: int = 32) -> float:
     x = np.asarray(x).ravel()
     y = np.asarray(y).ravel()
+    if len(x) == 0 or len(y) == 0 or not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
+        raise ValueError("Inputs to mutual_information must be non-empty and finite.")
     joint, _, _ = np.histogram2d(x, y, bins=bins, density=True)
     joint = joint.T
     px = np.sum(joint, axis=0)
@@ -25,6 +27,8 @@ def mutual_information(x: np.ndarray, y: np.ndarray, bins: int = 32) -> float:
 
 def optimal_tau_mi(data: np.ndarray, max_lag: int = 100, bins: int = 32) -> int:
     data = np.asarray(data).ravel()
+    if len(data) == 0 or not np.all(np.isfinite(data)):
+        raise ValueError("Data for optimal_tau_mi must be non-empty and finite.")
     data = (data - np.mean(data)) / (np.std(data) + 1e-12)
     N = len(data)
     max_lag = min(max_lag, N // 4)
@@ -41,10 +45,16 @@ def optimal_tau_mi(data: np.ndarray, max_lag: int = 100, bins: int = 32) -> int:
 
 def false_nearest_neighbors(data: np.ndarray, tau: int, max_m: int = 50, rtol: float = 15.0, atol: float = 2.0) -> np.ndarray:
     """
-    Basic False Nearest Neighbors (Kennel et al.).
+    False Nearest Neighbors (Kennel et al.).
     Returns array of FNN fraction for each m from 1 to max_m.
+
+    NOTE: FNN finds the MINIMAL embedding dimension to unfold the attractor.
+    HAVOK needs MORE dimensions (≥15) for a good linear Koopman approximation.
+    Use optimal_m_havok() for HAVOK parameter selection, not optimal_m_fnn().
     """
     data = np.asarray(data).ravel()
+    if len(data) == 0 or not np.all(np.isfinite(data)):
+        raise ValueError("Data for FNN must be non-empty and finite.")
     N = len(data)
     fnn_frac = []
 
@@ -71,20 +81,64 @@ def false_nearest_neighbors(data: np.ndarray, tau: int, max_m: int = 50, rtol: f
         frac = np.mean(fnn)
         fnn_frac.append(frac)
 
-        if frac < 0.05:   # common threshold
-            break
+        if frac < 0.01:   # stricter threshold — continue until truly stable
+            if len(fnn_frac) >= 3 and all(f < 0.02 for f in fnn_frac[-3:]):
+                break
 
     return np.array(fnn_frac)
 
 
 def optimal_m_fnn(data: np.ndarray, tau: int, max_m: int = 50) -> int:
-    """Return the smallest m where FNN fraction drops low."""
+    """Return the smallest m where FNN fraction drops low AND stabilizes.
+
+    NOTE: For HAVOK, use optimal_m_havok() which adds margin for the linear model.
+    This function returns the minimal embedding dimension (for attractor reconstruction)."""
+    data = np.asarray(data).ravel()
+    if len(data) < 20:
+        return 3
     fracs = false_nearest_neighbors(data, tau, max_m=max_m)
-    for i, f in enumerate(fracs):
-        if f < 0.05:
-            return i + 1
-    # fallback
-    return min(max(5, len(data) // 15), max_m)
+    # Find where FNN drops below 5% AND stays there for 2+ consecutive dimensions
+    for i in range(len(fracs) - 2):
+        if all(f < 0.05 for f in fracs[i:i + 3]):
+            return max(3, i + 1)
+    # fallback sensible min
+    return max(5, min(max(5, len(data) // 15), max_m))
+
+
+def optimal_m_havok(data: np.ndarray, tau: int, max_m: int = 80) -> int:
+    """Return the optimal embedding dimension m for HAVOK.
+
+    Uses SVD spectrum to find where singular values plateau, then adds margin.
+    This is the RIGHT method for HAVOK — FNN gives too few dimensions for
+    a good linear Koopman model.
+
+    Algorithm: build Hankel at m=max_m, compute SVD, find m where cumulative
+    energy exceeds 99%, then add safety margin."""
+    from havolib.embedding import hankel_matrix
+    import numpy as np
+
+    data = np.asarray(data).ravel()
+    N = len(data)
+
+    # Clamp max_m to be safe
+    max_m = min(max_m, max(15, N // 10), 100)
+
+    # Build Hankel at max_m and compute SVD
+    try:
+        H = hankel_matrix(data, max_m, tau)
+        from scipy.linalg import svd
+        _, s, _ = svd(H, full_matrices=False)
+
+        # Cumulative energy
+        cum_energy = np.cumsum(s**2) / np.sum(s**2)
+        # Find where 99% energy is reached
+        m_99 = int(np.searchsorted(cum_energy, 0.99)) + 1
+        # Add margin: HAVOK needs more dimensions than minimal unfolding
+        m_suggested = min(max_m, max(15, m_99 * 3))
+    except Exception:
+        m_suggested = max(15, min(50, N // 15))
+
+    return int(m_suggested)
 
 
 def suggest_parameters(data: np.ndarray, max_lag: int = 100, max_m: int = 50) -> dict:
@@ -95,13 +149,18 @@ def suggest_parameters(data: np.ndarray, max_lag: int = 100, max_m: int = 50) ->
     data = data - np.mean(data)
 
     tau = optimal_tau_mi(data, max_lag=max_lag)
-    m = optimal_m_fnn(data, tau, max_m=max_m)
+    # Cap tau for HAVOK — MI picks good tau for attractor reconstruction,
+    # but HAVOK's linear model needs smaller tau (coordinates should be somewhat
+    # correlated so the linear model can leave meaningful residuals).
+    tau = max(1, min(tau, max_lag // 5, 10))
+    # Use SVD-spectrum method for HAVOK (FNN gives too few dimensions)
+    m = optimal_m_havok(data, tau, max_m=max(50, max_m))
 
     return {
         "tau": int(tau),
         "m": int(m),
-        "method": "mutual_information + FNN",
-        "recommendation": f"tau={tau}, m={m} (MI for tau, FNN for m)"
+        "method": "mutual_information + SVD_spectrum",
+        "recommendation": f"tau={tau}, m={m} (MI for tau, SVD spectrum for m)"
     }
 
 

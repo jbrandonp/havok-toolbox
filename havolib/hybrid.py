@@ -16,7 +16,7 @@ Usage:
     from havolib.hybrid import HavokTransformer
     model = HavokTransformer(horizon=50)
     model.fit(train_data)
-    risk_forecast = model.predict_risk(test_data)
+    risk_forecast = model.predict_risk()  # or use fitted model on new data
 """
 
 from __future__ import annotations
@@ -78,9 +78,7 @@ class HavokTransformer:
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
         self.output_proj = nn.Linear(d_model, r)
-        self.risk_head = nn.Sequential(
-            nn.Linear(r * horizon, 64), nn.ReLU(), nn.Linear(64, 1), nn.Sigmoid()
-        )
+        # risk_head removed — was dead code (never in optimizer, never called)
 
     def fit(
         self,
@@ -115,8 +113,7 @@ class HavokTransformer:
         optimizer = torch.optim.Adam(
             list(self.input_proj.parameters())
             + list(self.transformer.parameters())
-            + list(self.output_proj.parameters())
-            + list(self.risk_head.parameters()),
+            + list(self.output_proj.parameters()),
             lr=self.lr,
         )
 
@@ -176,10 +173,8 @@ class HavokTransformer:
         self.input_proj.train()
         self.transformer.train()
         self.output_proj.train()
-        self.risk_head.train()
 
     def eval(self):
         self.input_proj.eval()
         self.transformer.eval()
         self.output_proj.eval()
-        self.risk_head.eval()

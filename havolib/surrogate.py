@@ -15,6 +15,10 @@ from typing import Tuple, List, Callable
 def phase_randomized_surrogate(x: np.ndarray, seed: int = None) -> np.ndarray:
     x = np.asarray(x).ravel()
     N = len(x)
+    if N == 0:
+        raise ValueError("Input data must not be empty.")
+    if not np.all(np.isfinite(x)):
+        raise ValueError("Input data contains NaN or Inf values.")
     
     # FFT
     Xf = np.fft.fft(x)
@@ -41,6 +45,9 @@ def phase_randomized_surrogate(x: np.ndarray, seed: int = None) -> np.ndarray:
 
 def generate_surrogates(x: np.ndarray, n_surrogates: int = 100, seed: int = 42) -> List[np.ndarray]:
     """Generate multiple phase-randomized surrogates."""
+    x = np.asarray(x).ravel()
+    if len(x) == 0 or not np.all(np.isfinite(x)):
+        raise ValueError("x must be non-empty and finite for surrogate generation.")
     surrogates = []
     rng = np.random.default_rng(seed)
     for i in range(n_surrogates):

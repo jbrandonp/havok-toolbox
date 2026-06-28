@@ -38,8 +38,12 @@ class TestImports:
 class TestHavokEstimator:
     def test_fit_returns_self(self,clean_sine):
         from havolib.estimator import HavokEstimator; assert HavokEstimator(r=4,tau=2,m=15).fit(clean_sine) is not None
-    def test_forcing_shape(self,clean_sine,fitted_estimator): assert fitted_estimator.forcing_.shape==clean_sine.shape
-    def test_risk_shape(self,clean_sine,fitted_estimator): assert fitted_estimator.risk_.shape==clean_sine.shape
+    def test_forcing_shape(self,clean_sine,fitted_estimator):
+        n_skip = getattr(fitted_estimator, 'n_skip_', 0)
+        assert fitted_estimator.forcing_.shape[0] == clean_sine.shape[0] - n_skip
+    def test_risk_shape(self,clean_sine,fitted_estimator):
+        n_skip = getattr(fitted_estimator, 'n_skip_', 0)
+        assert fitted_estimator.risk_.shape[0] == clean_sine.shape[0] - n_skip
     def test_risk_binary(self,fitted_estimator): assert set(np.unique(fitted_estimator.risk_)).issubset({0,1})
     def test_sv_positive_descending(self,fitted_estimator):
         sv=fitted_estimator.singular_values_; assert np.all(sv>0); assert np.all(np.diff(sv)<=1e-9)
@@ -68,13 +72,16 @@ class TestHavokEstimator:
     def test_regime_shift_detected(self,regime_shift_signal):
         from havolib.estimator import HavokEstimator
         e=HavokEstimator(r=5,tau=2,m=20).fit(regime_shift_signal)
-        assert np.sum(e.risk_[len(regime_shift_signal)//2:])>0
+        n_skip = getattr(e, 'n_skip_', 0)
+        start = max(0, len(regime_shift_signal)//2 - n_skip)
+        assert np.sum(e.risk_[start:]) > 0
     def test_2d_input(self):
         from havolib.estimator import HavokEstimator
         e=HavokEstimator(r=3,tau=1,m=10).fit(np.random.default_rng(1).standard_normal((500,1)))
-        assert e.forcing_.shape[0]==500
+        n_skip = getattr(e, 'n_skip_', 0)
+        assert e.forcing_.shape[0] == 500 - n_skip
     def test_predict_risk_agrees(self,fitted_estimator,clean_sine):
-        np.testing.assert_array_equal(fitted_estimator.predict_risk(clean_sine),fitted_estimator.risk_)
+        np.testing.assert_array_equal(fitted_estimator.predict_risk(), fitted_estimator.risk_)
 
 class TestEmbedding:
     def test_hankel_shape(self,clean_sine):
@@ -151,7 +158,8 @@ class TestEdgeCases:
     def test_zeros(self):
         from havolib.estimator import HavokEstimator
         with warnings.catch_warnings(): warnings.simplefilter("ignore"); e=HavokEstimator(r=3,tau=1,m=10).fit(np.zeros(500))
-        assert e.forcing_.shape[0]==500
+        n_skip = getattr(e, 'n_skip_', 0)
+        assert e.forcing_.shape[0] == 500 - n_skip
     def test_spike(self):
         from havolib.estimator import HavokEstimator; x=np.zeros(500); x[250]=100
         e=HavokEstimator(r=3,tau=1,m=10).fit(x); assert np.all(np.isfinite(e.forcing_))

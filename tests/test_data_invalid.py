@@ -77,9 +77,12 @@ class TestCorruptedInputs:
     def test_federated_empty_client(self):
         from havolib.federated import FederatedHAVOK
         fed = FederatedHAVOK()
-        # Should handle 0 clients gracefully
-        model = fed.train(rounds=1, verbose=False)
-        assert model.n_clients == 0
+        # < 2 clients should raise clear error
+        try:
+            fed.train(rounds=1, verbose=False)
+            assert False, "Should have raised ValueError"
+        except ValueError:
+            pass  # expected
 
     def test_arena_no_methods(self):
         from havolib.arena import BenchmarkArena

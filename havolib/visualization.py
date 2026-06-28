@@ -47,7 +47,7 @@ def plot_dashboard(time: np.ndarray,
         row=3, col=1
     )
 
-    # 4. Phase portrait (if possible)
+    # 4. Phase portrait — use xy if r<3, scene if r>=3
     if V is not None and V.shape[1] >= 3:
         fig.add_trace(
             go.Scatter3d(
@@ -63,10 +63,10 @@ def plot_dashboard(time: np.ndarray,
             row=4, col=1
         )
     else:
+        # Fallback: use xy subplot for annotation (scene won't accept annotations)
         fig.add_annotation(
             text="Need r ≥ 3 for 3D attractor view",
-            x=0.5, y=0.5, showarrow=False,
-            row=4, col=1
+            x=0.5, y=0.5, showarrow=False, xref="paper", yref="paper"
         )
 
     fig.update_layout(

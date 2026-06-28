@@ -53,7 +53,7 @@ class BenchmarkArena:
         Returns:
             list of ArenaEntry sorted by rank
         """
-        from benchmark.runner import run_benchmark, print_summary, METHODS_V2
+        from havolib.benchmark.runner import run_benchmark, print_summary
 
         if methods is None:
             methods = ["havok_pro", "havok_basic", "rolling_std", "cusum", "arima_residual"]

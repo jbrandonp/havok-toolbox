@@ -21,6 +21,7 @@ import numpy as np
 from typing import Optional, Dict, List, Tuple
 from dataclasses import dataclass, field
 import logging
+import warnings
 
 from havolib.pipeline import HavokPipeline
 
@@ -162,25 +163,25 @@ class MultichannelHAVOK:
                 forcing = pipe.get_forcing()
                 risk = pipe.get_risk()
 
-                # Pad to match original length
+                # Pad prefix with NaN to match original length (no artificial zeros for trimmed Hankel part)
                 if len(forcing) < n_samples:
-                    pad = np.zeros(n_samples - len(forcing))
+                    pad = np.full(n_samples - len(forcing), np.nan)
                     forcing = np.concatenate([pad, forcing])
                     risk = np.concatenate([np.zeros(n_samples - len(risk), dtype=int), risk])
 
-                forcing_matrix[:len(forcing), ch_idx] = forcing[:n_samples]
-                risk_matrix[:len(risk), ch_idx] = risk[:n_samples]
+                forcing_matrix[:n_samples, ch_idx] = forcing[:n_samples]
+                risk_matrix[:n_samples, ch_idx] = risk[:n_samples]
 
                 t_used = getattr(pipe, 'tau', self.tau)
-                m_used = getattr(pipe, 'm_', self.m) if hasattr(pipe, 'm_') else self.m
+                m_used = getattr(pipe, 'm', self.m)
 
                 channels.append(ChannelResult(
                     channel_index=ch_idx,
                     channel_name=self.channel_names[ch_idx],
                     forcing=forcing[:n_samples],
                     risk=risk[:n_samples].astype(int),
-                    max_forcing=float(np.max(np.abs(forcing))),
-                    n_risk_events=int(np.sum(risk)),
+                    max_forcing=float(np.nanmax(np.abs(forcing))) if np.any(np.isfinite(forcing)) else 0.0,
+                    n_risk_events=int(np.nansum(risk)),
                     tau_used=int(t_used) if isinstance(t_used, (int, np.integer)) else t_used,
                     m_used=int(m_used) if isinstance(m_used, (int, np.integer)) else m_used,
                 ))
@@ -197,12 +198,15 @@ class MultichannelHAVOK:
                     m_used=0,
                 ))
 
-        # Joint analysis
-        joint_forcing = np.mean(np.abs(forcing_matrix), axis=1)
+        # Joint analysis (use nanmean to tolerate prefix nans in padded channels)
+        abs_f = np.abs(forcing_matrix)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            jf = np.nanmean(abs_f, axis=1)
+        joint_forcing = np.nan_to_num(jf, nan=0.0)
         joint_risk = np.mean(risk_matrix.astype(float), axis=1) >= self.joint_threshold
 
         # Coupling matrix: correlation of |forcing| between channels
-        abs_f = np.abs(forcing_matrix)
         coupling = np.corrcoef(abs_f.T) if self.n_channels > 1 else np.eye(1)
         coupling = np.nan_to_num(coupling, 0.0)
 

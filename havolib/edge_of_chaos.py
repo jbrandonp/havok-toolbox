@@ -119,6 +119,13 @@ def correlation_dimension(
     if M < 100:
         return 0.0
 
+    # Validate eps_range
+    eps_min, eps_max = float(eps_range[0]), float(eps_range[1])
+    if eps_min <= 0 or eps_max <= 0:
+        raise ValueError(f"eps_range values must be positive, got {eps_range}")
+    if eps_min >= eps_max:
+        raise ValueError(f"eps_range[0] must be < eps_range[1], got {eps_range}")
+
     # Build delay vectors (subsample for performance)
     max_points = min(M, 2000)
     idx = np.linspace(0, M - 1, max_points, dtype=int)

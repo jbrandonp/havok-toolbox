@@ -26,8 +26,12 @@ log = logging.getLogger("havok.engine")
 
 
 @dataclass
-class StreamConfig:
-    """Configuration for one input stream."""
+class EngineStream:
+    """Runtime stream config (loose dict-based, for YAML ingestion).
+
+    This is the ENGINE's runtime container — NOT the validated frozen
+    StreamConfig from havolib.config. Renamed to avoid name collision.
+    """
     id: str
     source: str  # "mqtt://...", "csv://...", "synthetic://lorenz", "synthetic://eeg"
     havok_params: Dict[str, Any] = field(default_factory=dict)
@@ -37,9 +41,13 @@ class StreamConfig:
 
 
 @dataclass
-class EngineConfig:
-    """Full engine configuration."""
-    streams: List[StreamConfig] = field(default_factory=list)
+class EngineRuntime:
+    """Runtime engine configuration (loose dict-based, for YAML ingestion).
+
+    This is the ENGINE's runtime container — NOT the validated frozen
+    EngineConfig from havolib.config. Renamed to avoid name collision.
+    """
+    streams: List[EngineStream] = field(default_factory=list)
     risk: Dict[str, Any] = field(default_factory=dict)
     alert_targets: Dict[str, Dict] = field(default_factory=dict)
     log_level: str = "INFO"
@@ -54,7 +62,7 @@ class HavokEngine:
 
     def __init__(self, config_path: Optional[str] = None, config_dict: Optional[Dict] = None):
         self._streams: Dict[str, IncrementalHAVOK] = {}
-        self._configs: Dict[str, StreamConfig] = {}
+        self._configs: Dict[str, EngineStream] = {}
         self._risk_engine = RiskEngine()
         self._alert_pipeline = AlertPipeline()
         self._tasks: List[asyncio.Task] = []
@@ -91,7 +99,7 @@ class HavokEngine:
 
         # Streams
         for stream_raw in raw.get("streams", []):
-            cfg = StreamConfig(
+            cfg = EngineStream(
                 id=stream_raw["id"],
                 source=stream_raw["source"],
                 havok_params=stream_raw.get("havok", {}),
@@ -143,7 +151,7 @@ class HavokEngine:
         await asyncio.gather(*self._tasks, return_exceptions=True)
         log.info("Engine stopped")
 
-    async def _run_stream(self, stream_id: str, cfg: StreamConfig) -> None:
+    async def _run_stream(self, stream_id: str, cfg: EngineStream) -> None:
         """Main loop for one stream."""
         havok = self._streams[stream_id]
         source = cfg.source
@@ -209,7 +217,7 @@ class HavokEngine:
 
             await asyncio.sleep(0.005)
 
-    async def _run_mqtt(self, stream_id: str, havok: IncrementalHAVOK, cfg: StreamConfig) -> None:
+    async def _run_mqtt(self, stream_id: str, havok: IncrementalHAVOK, cfg: EngineStream) -> None:
         """Ingest from MQTT broker."""
         try:
             import paho.mqtt.client as mqtt

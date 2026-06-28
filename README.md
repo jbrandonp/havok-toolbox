@@ -1,11 +1,14 @@
-# HAVOK Regime-Shift Detector v0.7.1
+# HAVOK Regime-Shift Detector v0.9.0
+
+> **2026 Q2 hardening**: Portable install (pip-ready), production-grade robustness fixes across all modules, SVD-spectrum auto-tune replacing broken FNN, config unification, 0 runtime crashes on edge cases.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.7.1-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.9.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.9+-green" alt="Python">
-  <img src="https://img.shields.io/badge/tests-276%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-284%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-73%25-yellow" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License">
-  <img src="https://img.shields.io/badge/docs-passing-success" alt="Docs">
+  <img src="https://img.shields.io/badge/pip%20install-ready-success" alt="pip install">
 </p>
 
 **Turn chaos into actionable early-warning signals.**
@@ -122,10 +125,10 @@ The forcing signal spikes **before** the raw signal shows any visible change, ma
 
 ```
 havok-toolbox/
-├── havolib/                    # Core library (30 modules)
-│   ├── pipeline.py             # Batch HAVOK pipeline
+├── havolib/                    # Core library (30+ modules)
+│   ├── pipeline.py             # Batch HAVOK pipeline (primary user entry)
 │   ├── estimator.py            # sklearn-compatible HavokEstimator
-│   ├── adaptive.py             # Non-stationary adaptive HAVOK
+│   ├── adaptive.py             # Non-stationary adaptive HAVOK + BOCPD
 │   ├── multichannel.py         # Parallel multi-signal mHAVOK
 │   ├── hybrid.py               # HAVOK-Transformer (Neural ODE)
 │   ├── federated.py            # Federated Learning + DP
@@ -134,12 +137,18 @@ havok-toolbox/
 │   ├── arena.py                # Public benchmark leaderboard
 │   ├── edge_of_chaos.py        # LLE + CSD + edge score
 │   ├── ml_risk_predictor.py    # ESN forcing forecaster
+│   ├── uncertainty.py          # Surrogates, CRPS, conformal intervals
 │   ├── engine/                 # Streaming engine (7 modules)
 │   │   ├── engine.py           # Async orchestrator (MQTT/CSV/Synthetic)
 │   │   ├── ring_buffer.py      # O(1) circular buffer
 │   │   ├── incremental_havok.py# Sliding-window HAVOK
-│   │   ├── risk_engine.py      # Multi-dim risk scoring
-│   │   └── alert_pipeline.py   # Alert routing + cooldown
+│   │   └── risk_engine.py      # Multi-dim risk scoring
+│   ├── benchmark/              # 5 datasets × 5 methods (now inside havolib)
+│   ├── dashboard/              # Streamlit dashboards v3 unified
+│   │   ├── app.py              # Batch analysis
+│   │   ├── engine_dashboard.py # Streaming engine
+│   │   ├── advanced.py         # Comparison + What-if
+│   │   └── v3.py               # Unified (multi + adaptive + attribution)
 │   ├── gpu.py                  # GPU acceleration (CuPy)
 │   ├── config.py               # Dataclass config + YAML profiles
 │   ├── serialize.py            # .havok file format
@@ -147,25 +156,19 @@ havok-toolbox/
 │   ├── user.py                 # analyze/batch/bootstrap/export
 │   ├── logging_config.py       # Structured logging
 │   └── visualization.py        # Plotly figures
-├── benchmark/                  # 5 datasets × 5 methods
-├── dashboard/                  # Streamlit dashboards (v3 unified)
-│   ├── app.py                  # Batch analysis
-│   ├── engine_dashboard.py     # Streaming engine
-│   ├── advanced.py             # Comparison + What-if
-│   └── v3.py                   # Unified (multi + adaptive + attribution)
-├── tests/                      # 276 tests (22 files)
-│   ├── test_master_full.py     # Master suite (61 tests, all categories)
+├── tests/                      # 284 tests (24 files)
+│   ├── test_master_full.py     # Master suite (61 tests)
 │   ├── test_v070_modules.py    # v0.7.0 module coverage
 │   ├── test_properties.py      # Hypothesis property-based
 │   ├── test_regression.py      # Golden value stability
 │   ├── test_cli.py             # CLI integration
-│   └── ...                     # 17 more test files
+│   └── ...                     # 18 more test files
 ├── docs/
 │   ├── adr.md                  # Architecture Decision Records
 │   └── competitive_comparison.md
 ├── _cli_havok.py               # CLI (7 commands)
-├── engine.yaml                 # Streaming engine config
 ├── havok_config.yaml           # HAVOK profiles (EEG, finance, climate, Lorenz)
+├── engine.yaml                 # Streaming engine config
 ├── pyproject.toml
 └── README.md
 ```
@@ -187,7 +190,7 @@ havok-toolbox/
 | Streaming engine | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Benchmark suite | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Dashboard | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Tests | 276 | ~20 | ~10 | ~5 | ~50 |
+| Tests | 284 | ~20 | ~10 | ~5 | ~50 |
 
 ---
 
@@ -255,6 +258,24 @@ pytest tests/ -v
 - Kutz, Brunton, Brunton, Proctor. *"Dynamic Mode Decomposition."* SIAM, 2016.
 
 ---
+
+## 🚀 What's New (v0.9 — Production Hardening)
+
+- **Auto-tune fixed**: `optimal_m_havok()` uses SVD spectrum instead of broken FNN. `suggest_parameters()` now returns m ≥ 15 and caps tau ≤ 10 for meaningful forcing residuals.
+- **Portable install**: `pip install havok-toolbox` works. `benchmark/` and `dashboard/` moved into `havolib/` for zero-config imports. `importlib.resources` for data files.
+- **Robustness sweep**: `correlation_dimension` validates input ranges, `AdaptiveHAVOK` handles short data gracefully, `plot_dashboard` works with r<3, `FederatedHAVOK` raises `ValueError` instead of silent failure.
+- **Naming cleanup**: `bayesian_changepoint` → `pelt_changepoint` (with deprecated alias). `_collect_states_vectorized` → `_collect_states` (wasn't vectorized). Engine uses `EngineStream`/`EngineRuntime` distinct from frozen config dataclasses.
+- **Dead code removed**: vestigial `risk_head` in `hybrid.py`, buggy GEV tail-model branch in `_compute_gev_risk`.
+- **Config unified**: no more name collision between engine's runtime config and `config.py`'s frozen dataclasses.
+- **Tests**: 284 passed (was 276), 0 skipped, 73% coverage, `torch` + `pytest-cov` installed.
+
+## 🚀 What's New (v0.8 — Core Deepening)
+
+- **estimator.py**: GEV calibrated `risk_proba_`, `fit_with_ci()` (phase-randomized bootstrap), Gavish-Donoho optimal rank (`r='auto'`), **fixed real `transform(X)`** for new data + full sklearn compliance.
+- **adaptive.py**: `BayesianOnlineCP` (Adams-MacKay streaming), `_koopman_drift_detect`, `RegimeMemory` (parameter meta-learning), soft regime blending.
+- New `uncertainty.py`: surrogates, block bootstrap, CRPS, conformal helpers.
+- Validated demos committed under `demo/` (Lorenz + reports).
+- Personal notes cleaned; project now focused on verifiable numerical depth.
 
 ## 📄 License
 

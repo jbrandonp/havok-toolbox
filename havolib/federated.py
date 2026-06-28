@@ -96,9 +96,10 @@ class FederatedHAVOK:
             FederatedModel with aggregated global parameters
         """
         if len(self.clients) < 2:
-            logger.warning("Need at least 2 clients for federated learning")
-            return FederatedModel(tau=1, m=50, r=5, global_forcing_params={},
-                                  n_clients=len(self.clients), rounds_trained=0)
+            raise ValueError(
+                f"Federated learning requires at least 2 clients, got {len(self.clients)}. "
+                "Add clients with fed.add_client(name, data)."
+            )
 
         # Aggregate initial params
         client_stats = []

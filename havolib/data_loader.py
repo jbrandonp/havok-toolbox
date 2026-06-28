@@ -19,8 +19,19 @@ try:
 except ImportError:
     MNE_AVAILABLE = False
 
-# Portable data directory: sibling to havolib/ (works in source, editable install, and packaged)
-_BASE_DIR = Path(__file__).resolve().parent.parent
+# Portable data directory: works in both editable and pip-installed modes
+def _get_package_data_dir() -> Path:
+    """Return the package root directory, portable across install modes."""
+    try:
+        # Python 3.9+: use importlib.resources for installed packages
+        from importlib.resources import files as _res_files
+        return Path(str(_res_files("havolib")))
+    except Exception:
+        pass
+    # Fallback: sibling to havolib/ (editable install / source layout)
+    return Path(__file__).resolve().parent.parent
+
+_BASE_DIR = _get_package_data_dir()
 DEFAULT_DATA_DIR = _BASE_DIR / "data"
 
 

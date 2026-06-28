@@ -99,9 +99,9 @@ def bootstrap_forcing(
                 pipe.fit(t_boot, x_boot)
                 f = pipe.get_forcing()
 
-                # Pad to match original length
+                # Pad prefix with NaN (no artificial zeros for trimmed part)
                 if len(f) < n:
-                    pad = np.zeros(n - len(f))
+                    pad = np.full(n - len(f), np.nan)
                     f = np.concatenate([pad, f])
                 forcings.append(f[:n])
             except Exception:
@@ -112,8 +112,8 @@ def bootstrap_forcing(
     if len(forcings) < 10:
         warnings.warn(f"Only {len(forcings)} bootstrap samples — results unreliable")
         if not forcings:
-            return {"forcing_mean": np.zeros(n), "forcing_lower": np.zeros(n),
-                    "forcing_upper": np.zeros(n), "risk_probability": np.zeros(n),
+            return {"forcing_mean": np.full(n, np.nan), "forcing_lower": np.full(n, np.nan),
+                    "forcing_upper": np.full(n, np.nan), "risk_probability": np.zeros(n),
                     "significant_mask": np.zeros(n, dtype=bool)}
 
     F = np.array(forcings)
@@ -248,11 +248,14 @@ class AnalysisReport:
 
         if self.forcing is not None:
             t = np.arange(n)
-            # Pad arrays to full length if shorter
-            f_out = self.forcing[:n] if len(self.forcing) >= n else np.pad(self.forcing, (0, max(0, n - len(self.forcing))))
-            r_out = (self.risk[:n] if self.risk is not None and len(self.risk) >= n
-                     else np.pad(self.risk, (0, max(0, n - len(self.risk)))) if self.risk is not None
-                     else np.zeros(n))
+            # Pad prefix with NaN if shorter (no artificial zeros)
+            pad_len = max(0, n - len(self.forcing))
+            f_out = self.forcing[:n] if len(self.forcing) >= n else np.concatenate([np.full(pad_len, np.nan), self.forcing])
+            if self.risk is not None:
+                r_pad = max(0, n - len(self.risk))
+                r_out = self.risk[:n] if len(self.risk) >= n else np.concatenate([np.zeros(r_pad, dtype=int), self.risk])
+            else:
+                r_out = np.zeros(n, dtype=int)
 
             if path.suffix == ".json":
                 export_json(str(path), {
@@ -427,13 +430,16 @@ def suggest_and_explain(
 
     Returns a dict with tau, m, explanation, and quality assessment.
     """
-    from havolib.auto_tune import optimal_tau_mi, optimal_m_fnn, mutual_information
+    from havolib.auto_tune import optimal_tau_mi, optimal_m_havok, mutual_information
 
     x = np.asarray(x).ravel()
     x = x - np.mean(x)
 
     tau = optimal_tau_mi(x, max_lag=max_lag)
-    m = optimal_m_fnn(x, tau, max_m=max_m)
+    # Cap tau for HAVOK — MI optimizes for attractor independence,
+    # but HAVOK's linear model needs smaller tau for meaningful residuals.
+    tau = max(1, min(tau, max_lag // 5, 10))
+    m = optimal_m_havok(x, tau, max_m=max_m)
 
     # Quality check
     mi_at_tau = mutual_information(x[:-tau], x[tau:]) if tau < len(x) - 1 else 0

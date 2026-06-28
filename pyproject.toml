@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "havok-toolbox"
-version = "0.7.0"
+version = "0.9.0"
 description = "HAVOK Regime-Shift Detector: extract intermittent forcing signals from univariate time series using delay embedding + SVD (Brunton et al. 2017)"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -16,17 +16,16 @@ keywords = ["time-series", "havok", "chaos", "regime-shift", "koopman", "embeddi
 dependencies = [
     "numpy>=1.21",
     "scipy>=1.7",
-    "pandas>=1.3",
     "scikit-learn>=1.0",
-    "plotly>=5.0",
-    "streamlit>=1.10",
-    "click>=8.0",
-    "pyyaml",
-    "ruptures",
 ]
 
 [project.optional-dependencies]
-all = ["havok-toolbox[streaming,progress,gpu,eeg,automl,fast,torch]"]
+viz = ["plotly>=5.0"]
+export = ["pandas>=1.3"]
+detection = ["ruptures"]
+cli = ["click>=8.0", "pyyaml"]
+dashboard = ["streamlit>=1.10"]
+config = ["pyyaml"]
 streaming = ["paho-mqtt>=2.0"]
 progress = ["tqdm>=4.66"]
 gpu = ["cupy-cuda12x>=13.0"]
@@ -34,7 +33,8 @@ eeg = ["pyedflib>=0.1", "mne>=1.6"]
 automl = ["optuna>=4.0"]
 fast = ["polars>=1.0"]
 torch = ["torch>=2.0"]
-full = ["havok-toolbox[streaming,progress,gpu,eeg,automl,fast,torch]"]
+all = ["havok-toolbox[viz,export,detection,cli,dashboard,config,streaming,progress,gpu,eeg,automl,fast,torch]"]
+full = ["havok-toolbox[all]"]
 dev = ["pytest", "hypothesis>=6.100"]
 
 [project.scripts]
@@ -42,10 +42,11 @@ havok = "_cli_havok:cli"
 
 [tool.setuptools]
 py-modules = ["_cli_havok"]
-packages = ["havolib", "havolib.engine"]
+packages = ["havolib", "havolib.engine", "havolib.benchmark", "havolib.dashboard"]
 
 [tool.setuptools.package-data]
-"*" = ["data/*.csv", "data/chbmit/*.edf"]
+havolib = ["havok_config.yaml", "engine.yaml", "data/*.csv", "data/chbmit/*.edf"]
+"*" = ["*.yaml", "*.csv"]
 
 [project.urls]
 Homepage = "https://github.com/jbrandonp/havok-toolbox"

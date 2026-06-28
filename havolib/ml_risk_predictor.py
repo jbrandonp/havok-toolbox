@@ -64,8 +64,8 @@ class FastForcingRiskPredictor:
         W = W / (eig_max + 1e-10) * self.rho
         self.W = W
 
-    def _collect_states_vectorized(self, U: np.ndarray, washout: int = 50) -> np.ndarray:
-        """Vectorized state collection using matrix operations + leaky integrator."""
+    def _collect_states(self, U: np.ndarray, washout: int = 50) -> np.ndarray:
+        """Collect reservoir states via leaky integrator (sequential, O(N×N_res))."""
         if self.W is None:
             self._init_reservoir()
 
@@ -94,7 +94,7 @@ class FastForcingRiskPredictor:
             target_train = forcing_train[1:]
             forcing_train = forcing_train[:-1]
 
-        X = self._collect_states_vectorized(forcing_train, washout=washout)
+        X = self._collect_states(forcing_train, washout=washout)
         Y = target_train[washout:].reshape(-1, self.input_dim)
 
         X_aug = np.hstack([X, np.ones((X.shape[0], 1))])

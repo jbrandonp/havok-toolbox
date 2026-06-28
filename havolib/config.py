@@ -191,7 +191,19 @@ class EngineConfig:
 
 # ── Loader: from YAML profile ──────────────────────────────────
 
-_BUILTIN_CONFIG = Path(__file__).resolve().parent.parent / "havok_config.yaml"
+def _get_config_path() -> Path:
+    """Return path to havok_config.yaml, portable across install modes."""
+    try:
+        from importlib.resources import files as _res_files
+        p = Path(str(_res_files("havolib"))) / "havok_config.yaml"
+        if p.exists():
+            return p
+    except Exception:
+        pass
+    # Fallback: sibling to havolib/ (editable install / source layout)
+    return Path(__file__).resolve().parent.parent / "havok_config.yaml"
+
+_BUILTIN_CONFIG = _get_config_path()
 
 
 def load_profile(name: str, config_path: Optional[str] = None) -> PipelineConfig:

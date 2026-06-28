@@ -1,0 +1,53 @@
+# HAVOK default configuration profiles
+# Use: havok analyze --config eeg (or finance, climate)
+
+eeg:
+  tau: 5
+  m: 20
+  r: 5
+  threshold_std: 3.0
+  window: 100
+  preprocess:
+    interpolate: true
+    smooth_method: savgol
+    smooth_window: 11
+    outlier_method: iqr
+    detrend: false
+
+finance:
+  tau: 2
+  m: 80
+  r: 8
+  threshold_std: 2.5
+  window: 50
+  preprocess:
+    interpolate: true
+    smooth_method: lowpass
+    smooth_window: 11
+    outlier_method: zscore
+    detrend: false
+
+climate:
+  tau: 3
+  m: 100
+  r: 10
+  threshold_std: 2.0
+  window: 200
+  preprocess:
+    interpolate: true
+    smooth_method: savgol
+    smooth_window: 21
+    outlier_method: iqr
+    detrend: true
+
+lorenz_demo:
+  tau: 10
+  m: 50
+  r: 5
+  threshold_std: 3.0
+  window: 100
+  preprocess:
+    interpolate: false
+    smooth_method: null
+    outlier_method: null
+    detrend: false
