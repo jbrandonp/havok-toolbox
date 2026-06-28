@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.9+-green" alt="Python">
-  <img src="https://img.shields.io/badge/tests-284%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-286%20passed-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-73%25-yellow" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License">
   <img src="https://img.shields.io/badge/pip%20install-ready-success" alt="pip install">
@@ -331,7 +331,7 @@ streamlit run havolib/dashboard/engine_dashboard.py
 
 The test suite covers correctness, edge cases, and numerical stability:
 
-- **284 tests**✅ passing with 73% line coverage
+- **286 tests** passing with 73% line coverage
 - **Property-based tests**🔁 via Hypothesis: SVD orthonormality, embedding isotonicity, forcing determinism
 - **Golden value tests**🏅: fixed-seed Lorenz forcing output verified across versions
 - **Edge case coverage**🛡️: empty signals, constant signals, NaN/Inf handling, very short data, single-channel, invalid parameters
@@ -372,6 +372,11 @@ pytest tests/ -v
 ## 🚀 Changelog
 
 ### v0.3.0 — First Stable Release
+
+- **Engineering hardening**: YAML config validation with clear error messages; CuPy import failure now logs actionable warning instead of silent fallback; `free_gpu_memory()` prevents pool fragmentation in long-running processes; `numpy<2.0` pinned to prevent NumPy 2.x ABI breakage.
+- **Paper compliance audit**: SVD coordinate flow verified — code is mathematically correct. Full Paper Correspondence section in README with compliance matrix, heuristic justification, and post-paper extension catalog. `eigen_time_delay()` docstring now explains numpy U vs paper V(t) naming convention.
+- **Scientific validation**: `test_forcing_sparsity_on_clean_lorenz` verifies HAVOK intermittency (p99/p90 > 1.5, max/median > 7). `test_svd_solver_equivalence` confirms randomized SVD matches exact within 1% tolerance.
+- **Surrogate test assumption documented**: `validate_with_surrogates()` now warns about parameter reuse bias in its docstring.
 
 - **Auto-tune fixed**: `optimal_m_havok()` uses SVD spectrum instead of broken FNN. `suggest_parameters()` returns m ≥ 15 with tau capped for meaningful forcing residuals.
 - **Pipeline/estimator unified**: `HavokPipeline.fit()` delegates to `HavokEstimator` internally — single center of truth for HAVOK math.
