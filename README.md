@@ -279,7 +279,7 @@ streamlit run havolib/dashboard/engine_dashboard.py
 
 The test suite covers correctness, edge cases, and numerical stability:
 
-- **284 tests** passing with 73% line coverage
+- **284 tests**✅ passing with 73% line coverage
 - **Property-based tests** via Hypothesis: SVD orthonormality, embedding isotonicity, forcing determinism
 - **Golden value tests**: fixed-seed Lorenz forcing output verified across versions
 - **Edge case coverage**: empty signals, constant signals, NaN/Inf handling, very short data, single-channel, invalid parameters
