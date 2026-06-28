@@ -1,6 +1,6 @@
 # HAVOK Regime-Shift Detector v0.3.0
 
-> Portable install, pipeline/estimator unified, auto-tune fixed, production-ready robustness.
+> Portable install, one-click UX for non-programmers, pipeline/estimator unified, production-ready robustness.
 
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version">
@@ -13,9 +13,7 @@
 
 **Turn chaos into actionable early-warning signals.**
 
-`havok-toolbox` is the most complete open-source implementation of the **HAVOK** (Hankel Alternative View of Koopman) algorithm from *"Chaos as an Intermittently Forced Linear System"* (Brunton, Brunton, Proctor & Kutz, *Nature Communications*, 2017).
-
-Given any univariate time series, HAVOK extracts the hidden **intermittent forcing signal** that precedes sudden regime shifts — seizures, market crashes, climate tipping points, industrial failures — before they happen.
+`havok-toolbox` implements the **HAVOK** (Hankel Alternative View of Koopman) algorithm from *"Chaos as an Intermittently Forced Linear System"* (Brunton, Brunton, Proctor & Kutz, *Nature Communications*, 2017). Given a univariate time series, HAVOK extracts the hidden **intermittent forcing signal** that precedes sudden regime shifts — seizures in EEG, market crashes, climate tipping points, industrial failures — before they manifest in the raw data.
 
 ---
 
@@ -23,64 +21,83 @@ Given any univariate time series, HAVOK extracts the hidden **intermittent forci
 
 | Category | Capability |
 |----------|------------|
-| **Core HAVOK** | Full Hankel embedding → SVD → eigen-time-delay → forcing extraction → regime-shift risk |
-| **Adaptive** | Auto-detects regime transitions, adapts parameters per segment *(unique — no other HAVOK lib does this)* |
-| **Multichannel** | Parallel multi-signal analysis (EEG 23ch, multi-asset, multi-sensor) with joint forcing + coupling |
-| **AutoML** | Optuna TPE hyperparameter optimization — finds optimal τ, m, r automatically |
-| **Hybrid ML** | HAVOK-Transformer (Neural ODE), ESN predictor, edge-of-chaos scoring (LLE + CSD) |
-| **Federated** | Privacy-preserving training across hospitals/institutions (FedAvg + Differential Privacy) |
-| **Explainable** | Forcing Attribution — explains *why* a spike occurred (amplitude, frequency, trend, noise) |
-| **Benchmark** | 5 datasets × 5 methods, public leaderboard JSON generator |
-| **Production** | sklearn-compatible `HavokEstimator`, GPU acceleration (CuPy), 10-50× Polars loader |
-| **Streaming** | MQTT + CSV + Synthetic engine with alert pipeline (cooldown, dedup, webhook-ready) |
-| **Export** | CSV / JSON / `.havok` serialization, Plotly visualization, Streamlit dashboard |
+| **Core HAVOK** | Full pipeline: Hankel embedding → truncated SVD → eigen-time-delay coordinates → forcing extraction → regime-shift risk quantification |
+| **Auto-tuning** | SVD-spectrum based `optimal_m_havok()` replaces FNN; Mutual Information delay selection with automatic tau capping |
+| **sklearn API** | `HavokEstimator` with `fit()`, `transform()`, `fit_transform()`, `score()`, `get_params()` — compatible with `GridSearchCV` and `Pipeline` |
+| **Adaptive** | Non-stationary analysis: BOCPD or PELT changepoint detection, per-segment parameter retuning, soft regime blending, RegimeMemory |
+| **Multichannel** | Two modes: `parallel` (fast per-channel) and `composite` (true mHAVOK with joint Hankel SVD capturing cross-channel coupling) |
+| **AutoML** | Optuna TPE hyperparameter optimization over (τ, m, r, threshold, window, diff_method) with median pruning |
+| **Hybrid ML** | HAVOK-Transformer (PyTorch encoder-decoder on eigen-coordinates); ESN forcing forecaster |
+| **Edge of Chaos** | Rosenstein Largest Lyapunov Exponent, Grassberger-Procaccia correlation dimension, critical slowing down, combined edge score |
+| **Uncertainty** | Phase-randomized surrogate testing, block bootstrap confidence intervals, CRPS scoring, conformal prediction |
+| **Federated** | Privacy-preserving multi-client aggregation with (ε, δ)-differential privacy for healthcare/institutional deployment |
+| **Attribution** | Per-spike explanation: amplitude contribution, frequency shift, trend deviation, noise component |
+| **Production** | GPU acceleration via CuPy; Polars CSV loader (10–50× faster than pandas); `.havok` serialization format |
+| **Streaming** | Async engine with MQTT, CSV-watch, and synthetic sources; alert pipeline with cooldown and deduplication |
+| **One-click app** | Streamlit dashboard with drag-and-drop file upload, auto-detection, one-click CSV/HTML report export — zero coding required |
+| **Benchmark** | 5 datasets × 5 methods; Arena generates JSON leaderboard |
 
 ---
 
 ## 🚀 Quick Start
 
+### No coding required
 ```bash
-# Install
-pip install havok-toolbox[all]
+# Double-click on Windows
+run_havok_app.bat
 
-# Run the Lorenz demo in 1 line
-havok demo
+# Or from terminal
+pip install havok-toolbox[app]
+havok-app
+```
+Opens a browser with drag-and-drop file upload, auto-analysis, and report download.
 
-# Analyze a CSV file
-havok analyze data.csv -c price
+### Command-line
+```bash
+pip install havok-toolbox
 
-# Detect edge-of-chaos
-havok chaos data.csv -c eeg
+# Analyze a CSV file (auto-detects columns)
+havok analyze data.csv
 
-# Auto-optimize parameters with AutoML
-havok suggest data.csv -c signal
+# Specify column
+havok analyze data.csv -c price -o results.csv
 
-# Run benchmark arena
+# Run benchmark
 havok benchmark
+
+# Initialize streaming engine config
+havok engine init
 ```
 
-Or from Python:
-
+### Python API
 ```python
 import numpy as np
-from havolib import HavokEstimator, analyze
+from havolib import HavokPipeline, HavokEstimator
 
-# 1-liner sklearn-compatible
-forcing, risk = HavokEstimator(m=50, r=5).fit_transform(my_data)
+# One-liner with sklearn-compatible estimator
+est = HavokEstimator(tau=1, m=50, r=5)
+forcing = est.fit_transform(my_signal)  # returns forcing array
 
-# Full analysis with confidence intervals
-report = analyze(my_eeg_data, bootstrap_ci=True)
+# Full pipeline with auto-tuning
+pipe = HavokPipeline()
+pipe.auto_fit(None, my_signal)
+forcing = pipe.get_forcing()
+risk = pipe.get_risk()
+
+# Multichannel (EEG, multi-asset, sensor arrays)
+from havolib import MultichannelHAVOK
+mh = MultichannelHAVOK(n_channels=8, method="composite")
+result = mh.fit_transform(eeg_data)  # (n_samples, n_channels)
+
+# Adaptive non-stationary
+from havolib import AdaptiveHAVOK
+result = AdaptiveHAVOK().fit_transform(nonstationary_signal)
+
+# High-level analysis with bootstrap confidence intervals
+from havolib import analyze
+report = analyze(eeg_signal, bootstrap_ci=True)
 print(report.summary())
 report.export("results.csv")
-
-# Multichannel (EEG, multi-asset)
-from havolib import MultichannelHAVOK
-mh = MultichannelHAVOK(n_channels=8)
-result = mh.fit_transform(eeg_8ch)
-
-# AutoML
-from havolib import auto_optimize
-best = auto_optimize(my_data, n_trials=100)
 ```
 
 ---
@@ -95,15 +112,16 @@ pip install havok-toolbox
 pip install havok-toolbox[streaming]   # MQTT engine
 pip install havok-toolbox[gpu]         # CuPy acceleration
 pip install havok-toolbox[automl]      # Optuna optimization
-pip install havok-toolbox[fast]        # Polars (10x CSV)
+pip install havok-toolbox[fast]        # Polars (10-50× CSV loading)
 pip install havok-toolbox[eeg]         # EDF/MNE support
 pip install havok-toolbox[torch]       # HAVOK-Transformer
+pip install havok-toolbox[app]         # Streamlit dashboard
 pip install havok-toolbox[all]         # Everything
 pip install havok-toolbox[dev]         # Tests + Hypothesis
 
 # From source
 git clone https://github.com/jbrandonp/havok-toolbox
-cd havok-toolbox && pip install -e ".[all]"
+cd havok-toolbox && pip install -e ".[dev]"
 ```
 
 ---
@@ -112,12 +130,14 @@ cd havok-toolbox && pip install -e ".[all]"
 
 HAVOK decomposes a chaotic signal into **deterministic linear dynamics** + **intermittent forcing**:
 
-1. **Time-delay embedding** → Hankel matrix H
-2. **Truncated SVD** → eigen-time-delay coordinates V(t)
-3. **Linear regression** V̇ ≈ AV → isolate forcing F(t) = V̇ − AV
-4. **Thresholding** → regime-shift risk (binary or probabilistic)
+1. **Time-delay embedding**: Build Hankel matrix **H** by sliding a window of size `m` with delay `τ` across the signal
+2. **Truncated SVD**: Decompose H ≈ **U Σ Vᵀ** retaining `r` modes; eigen-time-delay coordinates **V(t)** capture the attractor geometry
+3. **Linear model**: Fit V̇ ≈ **A V** via least squares; the residual **F(t) = V̇ − A V** is the intermittent forcing
+4. **Risk detection**: Apply rolling thresholding on ‖F(t)‖ to flag regime shifts; probabilistic risk via percentile-calibrated logistic scaling
 
-The forcing signal spikes **before** the raw signal shows any visible change, making HAVOK a powerful **early warning system** for sudden regime transitions.
+The forcing signal spikes **before** the raw signal shows any visible change, making HAVOK an effective early warning system for sudden regime transitions.
+
+**Differentiation methods**: `finite_diff` (central differences, default), `spline_diff` (cubic spline via SciPy, noise-robust), `total_variation_diff` (TV-regularized, best for sharp jumps), `gradient` (NumPy wrapper).
 
 ---
 
@@ -125,50 +145,67 @@ The forcing signal spikes **before** the raw signal shows any visible change, ma
 
 ```
 havok-toolbox/
-├── havolib/                    # Core library (30+ modules)
-│   ├── pipeline.py             # Batch HAVOK pipeline (primary user entry)
-│   ├── estimator.py            # sklearn-compatible HavokEstimator
-│   ├── adaptive.py             # Non-stationary adaptive HAVOK + BOCPD
-│   ├── multichannel.py         # Parallel multi-signal mHAVOK
-│   ├── hybrid.py               # HAVOK-Transformer (Neural ODE)
-│   ├── federated.py            # Federated Learning + DP
-│   ├── attribution.py          # Forcing spike explanation
-│   ├── automl.py               # Optuna hyperparameter optimization
-│   ├── arena.py                # Public benchmark leaderboard
-│   ├── edge_of_chaos.py        # LLE + CSD + edge score
-│   ├── ml_risk_predictor.py    # ESN forcing forecaster
-│   ├── uncertainty.py          # Surrogates, CRPS, conformal intervals
-│   ├── engine/                 # Streaming engine (7 modules)
-│   │   ├── engine.py           # Async orchestrator (MQTT/CSV/Synthetic)
-│   │   ├── ring_buffer.py      # O(1) circular buffer
-│   │   ├── incremental_havok.py# Sliding-window HAVOK
-│   │   └── risk_engine.py      # Multi-dim risk scoring
-│   ├── benchmark/              # 5 datasets × 5 methods (now inside havolib)
-│   ├── dashboard/              # Streamlit dashboards v3 unified
-│   │   ├── app.py              # Batch analysis
-│   │   ├── engine_dashboard.py # Streaming engine
-│   │   ├── advanced.py         # Comparison + What-if
-│   │   └── v3.py               # Unified (multi + adaptive + attribution)
-│   ├── gpu.py                  # GPU acceleration (CuPy)
-│   ├── config.py               # Dataclass config + YAML profiles
-│   ├── serialize.py            # .havok file format
-│   ├── polars_loader.py        # 10-50× Pandas CSV/Parquet
-│   ├── user.py                 # analyze/batch/bootstrap/export
-│   ├── logging_config.py       # Structured logging
-│   └── visualization.py        # Plotly figures
+├── havolib/                    # Core library (36 modules, 7,500+ lines)
+│   ├── pipeline.py             # HavokPipeline — primary orchestration layer
+│   ├── estimator.py            # HavokEstimator — sklearn BaseEstimator + TransformerMixin
+│   ├── adaptive.py             # AdaptiveHAVOK — non-stationary with BOCPD + Koopman drift
+│   ├── multichannel.py         # MultichannelHAVOK — parallel + composite modes
+│   ├── hybrid.py               # HavokTransformer — PyTorch Transformer on eigen-coordinates
+│   ├── federated.py            # FederatedHAVOK — FedAvg with differential privacy
+│   ├── attribution.py          # explain_forcing_spike — per-feature spike explanation
+│   ├── automl.py               # auto_optimize — Optuna TPE hyperparameter search
+│   ├── arena.py                # BenchmarkArena — public leaderboard generator
+│   ├── edge_of_chaos.py        # Rosenstein LLE, GP correlation dimension, CSD, edge score
+│   ├── ml_risk_predictor.py    # FastForcingRiskPredictor — echo state network forecaster
+│   ├── uncertainty.py          # Surrogates, block bootstrap, CRPS, conformal intervals
+│   ├── surrogate.py            # Phase-randomized Fourier surrogates
+│   ├── config.py               # Frozen dataclass config + YAML profiles (eeg, finance, climate, lorenz)
+│   ├── data_loader.py          # generate_lorenz, load_csv, load_eeg with portable paths
+│   ├── polars_loader.py        # load_csv_fast — Polars-accelerated CSV/Parquet loading
+│   ├── pre_processing.py       # preprocess — Savitzky-Golay smoothing, IQR outlier removal, detrend
+│   ├── serialize.py            # save_pipeline / load_pipeline — .havok binary format
+│   ├── user.py                 # analyze, batch_analyze, bootstrap — high-level user API
+│   ├── visualization.py        # plot_dashboard — Plotly 4-panel figure
+│   ├── gpu.py                  # Transparent CuPy fallback for svd, lstsq, norm, eigvals
+│   ├── logging_config.py       # init_logging — structured logging setup
+│   ├── embedding.py            # hankel_matrix, auto_tau — delay embedding primitives
+│   ├── decomposition.py        # eigen_time_delay — truncated SVD on Hankel
+│   ├── forcing.py              # extract_forcing — linear model residual
+│   ├── detection.py            # threshold_risk, pelt_changepoint — risk flagging
+│   ├── auto_tune.py            # optimal_m_havok, optimal_tau_mi, suggest_parameters
+│   ├── engine/                 # Streaming engine subsystem (7 modules)
+│   │   ├── engine.py           # HavokEngine — async orchestrator (MQTT, CSV, synthetic)
+│   │   ├── ring_buffer.py      # RingBuffer — O(1) circular buffer
+│   │   ├── incremental_hankel.py # IncrementalHankel — streaming Hankel construction
+│   │   ├── incremental_havok.py  # IncrementalHAVOK — sliding-window decomposition
+│   │   ├── brand_svd.py        # BrandSVD — incremental SVD
+│   │   ├── risk_engine.py      # RiskEngine — multi-dimensional risk scoring
+│   │   └── alert_pipeline.py   # AlertPipeline — cooldown, dedup, webhook routing
+│   ├── benchmark/              # 5 datasets × 5 methods (packaged with library)
+│   │   ├── runner.py           # run_benchmark, print_summary
+│   │   ├── baselines.py        # rolling_std, cusum, arima_residual detectors
+│   │   └── cli.py              # Click CLI for benchmark
+│   └── dashboard/              # Streamlit dashboards
+│       ├── simple.py           # One-click app for non-programmers (NEW)
+│       ├── app.py              # Batch analysis dashboard
+│       ├── advanced.py         # Comparison + what-if simulation
+│       ├── engine_dashboard.py # Streaming engine monitor
+│       └── v3.py               # Unified (multichannel + adaptive + attribution)
 ├── tests/                      # 284 tests (24 files)
 │   ├── test_master_full.py     # Master suite (61 tests)
-│   ├── test_v070_modules.py    # v0.7.0 module coverage
-│   ├── test_properties.py      # Hypothesis property-based
+│   ├── test_v070_modules.py    # Module integration tests
+│   ├── test_properties.py      # Hypothesis property-based testing
 │   ├── test_regression.py      # Golden value stability
 │   ├── test_cli.py             # CLI integration
-│   └── ...                     # 18 more test files
+│   └── ...                     # 19 more test files
 ├── docs/
 │   ├── adr.md                  # Architecture Decision Records
 │   └── competitive_comparison.md
-├── _cli_havok.py               # CLI (7 commands)
-├── havok_config.yaml           # HAVOK profiles (EEG, finance, climate, Lorenz)
-├── engine.yaml                 # Streaming engine config
+├── demo/                       # Validated Lorenz demo with reports
+├── _cli_havok.py               # CLI entry point (havok analyze, benchmark, engine)
+├── run_havok_app.bat           # Windows double-click launcher
+├── havok_config.yaml           # Named profiles (eeg, finance, climate, lorenz_demo)
+├── engine.yaml                 # Streaming engine configuration
 ├── pyproject.toml
 └── README.md
 ```
@@ -179,17 +216,18 @@ havok-toolbox/
 
 | Criterion | **havok-toolbox** | pykoopman | PyDMD | rhavok | deeptime |
 |-----------|:---:|:---:|:---:|:---:|:---:|
-| HAVOK implementation | ★★★★★ | ★★ | — | ★★★★ | ★★ |
+| HAVOK fidelity | ★★★★★ | ★★ | — | ★★★★ | ★★ |
 | Adaptive/Non-stationary | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Multichannel (mHAVOK) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Multichannel (true mHAVOK) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | AutoML (Optuna) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Explainability | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Federated Learning | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Federated learning | ✅ | ❌ | ❌ | ❌ | ❌ |
 | sklearn-compatible | ✅ | ✅ | ❌ | ❌ | ✅ |
 | GPU acceleration | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Streaming engine | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Benchmark suite | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Dashboard | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Interactive dashboard | ✅ | ❌ | ❌ | ❌ | ❌ |
+| One-click UX (no coding) | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Tests | 284 | ~20 | ~10 | ~5 | ~50 |
 
 ---
@@ -198,13 +236,10 @@ havok-toolbox/
 
 | Command | Description |
 |---------|-------------|
-| `havok demo` | Run HAVOK on Lorenz attractor |
-| `havok analyze <file> -c <col>` | Full analysis + report |
-| `havok suggest <file> -c <col>` | Auto-tune τ, m parameters |
-| `havok predict <file> -c <col> --horizon 30` | ESN forcing prediction |
-| `havok chaos <file> -c <col>` | Edge-of-chaos metrics |
-| `havok benchmark` | Run benchmark arena |
-| `havok engine` | Streaming engine control |
+| `havok analyze <file> [-c COLUMN] [-o OUTPUT]` | One-click analysis with auto-tuning |
+| `havok benchmark [--datasets X] [--methods Y]` | Run benchmark arena |
+| `havok engine init` | Create default engine.yaml |
+| `havok-app` | Launch Streamlit dashboard |
 
 ---
 
@@ -212,35 +247,56 @@ havok-toolbox/
 
 | Parameter | Description | Typical Range |
 |-----------|-------------|---------------|
-| `τ` (tau) | Time delay for embedding | 1–30 |
+| `τ` (tau) | Time delay for Hankel embedding | 1–30 |
 | `m` | Embedding dimension (Hankel columns) | 10–100 |
 | `r` | Truncated SVD rank | 2–15 |
-| `threshold_std` | Risk detection sensitivity | 1.5–5.0 |
-| `window` | Rolling window for risk | 20–300 |
-| `diff_method` | Differentiation: `finite_diff`, `spline`, `total_variation`, `gradient` | — |
+| `threshold_std` | Risk detection sensitivity (standard deviations) | 1.5–5.0 |
+| `window` | Rolling window for risk computation | 20–300 |
+| `diff_method` | Differentiation: `finite_diff` (default), `spline`, `total_variation`, `gradient` | — |
+| `method` | Multichannel mode: `parallel` (default) or `composite` (joint decomposition) | — |
 
 ---
 
 ## 📊 Dashboard
 
-Launch the interactive dashboard:
-
 ```bash
+# One-click app (recommended for non-programmers)
+streamlit run havolib/dashboard/simple.py
+
 # Unified dashboard (multichannel + adaptive + attribution)
-streamlit run dashboard/v3.py
+streamlit run havolib/dashboard/v3.py
 
 # Advanced (comparison + what-if simulation)
-streamlit run dashboard/advanced.py
+streamlit run havolib/dashboard/advanced.py
 
 # Streaming engine monitor
-streamlit run dashboard/engine_dashboard.py
+streamlit run havolib/dashboard/engine_dashboard.py
+```
+
+---
+
+## 🔬 Validation & Testing
+
+The test suite covers correctness, edge cases, and numerical stability:
+
+- **284 tests** passing with 73% line coverage
+- **Property-based tests** via Hypothesis: SVD orthonormality, embedding isotonicity, forcing determinism
+- **Golden value tests**: fixed-seed Lorenz forcing output verified across versions
+- **Edge case coverage**: empty signals, constant signals, NaN/Inf handling, very short data, single-channel, invalid parameters
+- **Streaming engine**: buffer overflow, incremental SVD stability, alert deduplication
+- **Regression suite** (`test_master_full.py`): 61 tests across all subsystems
+
+Run locally:
+```bash
+pip install havok-toolbox[dev]
+pytest tests/ -v --cov=havolib
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! See [ADRs](docs/adr.md) for architectural decisions and design philosophy.
+Contributions welcome. See [Architecture Decision Records](docs/adr.md) for design philosophy and technical decisions.
 
 ```bash
 git clone https://github.com/jbrandonp/havok-toolbox
@@ -256,26 +312,26 @@ pytest tests/ -v
 - Brunton, Brunton, Proctor, Kutz. *"Chaos as an Intermittently Forced Linear System."* Nature Communications, 2017. [DOI: 10.1038/s41467-017-00030-8](https://doi.org/10.1038/s41467-017-00030-8)
 - Takens, F. *"Detecting strange attractors in turbulence."* Lecture Notes in Mathematics, 1981.
 - Kutz, Brunton, Brunton, Proctor. *"Dynamic Mode Decomposition."* SIAM, 2016.
+- Gavish & Donoho. *"The Optimal Hard Threshold for Singular Values."* IEEE Trans. Inf. Theory, 2014.
+- Rosenstein, Collins, De Luca. *"A practical method for calculating largest Lyapunov exponents."* Physica D, 1993.
 
 ---
 
-## 🚀 What's New (v0.3 — First Stable Release)
+## 🚀 Changelog
 
-- **Auto-tune fixed**: `optimal_m_havok()` uses SVD spectrum instead of broken FNN. `suggest_parameters()` now returns m ≥ 15 and caps tau ≤ 10 for meaningful forcing residuals.
-- **Portable install**: `pip install havok-toolbox` works. `benchmark/` and `dashboard/` moved into `havolib/` for zero-config imports. `importlib.resources` for data files.
-- **Robustness sweep**: `correlation_dimension` validates input ranges, `AdaptiveHAVOK` handles short data gracefully, `plot_dashboard` works with r<3, `FederatedHAVOK` raises `ValueError` instead of silent failure.
-- **Naming cleanup**: `bayesian_changepoint` → `pelt_changepoint` (with deprecated alias). `_collect_states_vectorized` → `_collect_states` (wasn't vectorized). Engine uses `EngineStream`/`EngineRuntime` distinct from frozen config dataclasses.
-- **Dead code removed**: vestigial `risk_head` in `hybrid.py`, buggy GEV tail-model branch in `_compute_gev_risk`.
-- **Config unified**: no more name collision between engine's runtime config and `config.py`'s frozen dataclasses.
-- **Tests**: 284 passed (was 276), 0 skipped, 73% coverage, `torch` + `pytest-cov` installed.
+### v0.3.0 — First Stable Release
 
-## 🚀 What's New (v0.8 — Core Deepening)
+- **Auto-tune fixed**: `optimal_m_havok()` uses SVD spectrum instead of broken FNN. `suggest_parameters()` returns m ≥ 15 with tau capped for meaningful forcing residuals.
+- **Pipeline/estimator unified**: `HavokPipeline.fit()` delegates to `HavokEstimator` internally — single center of truth for HAVOK math.
+- **True mHAVOK**: Added `method="composite"` to `MultichannelHAVOK` — composite Hankel matrix with joint SVD for genuine cross-channel coupling.
+- **One-click UX**: `run_havok_app.bat` (Windows launcher) and `havok-app` CLI entry point. Drag-and-drop Streamlit dashboard with auto-detection and report export.
+- **Portable install**: `pip install havok-toolbox` works from any directory. `benchmark/` and `dashboard/` moved into `havolib/`. `importlib.resources` for data files.
+- **Robustness**: `correlation_dimension` validates input ranges; `AdaptiveHAVOK` handles short data gracefully; `plot_dashboard` works with r<3; `FederatedHAVOK` raises `ValueError` instead of silent failure.
+- **Naming accuracy**: `bayesian_changepoint` → `pelt_changepoint` (with deprecated alias); `_collect_states_vectorized` → `_collect_states`; engine uses `EngineStream`/`EngineRuntime`.
+- **Dead code removed**: vestigial `risk_head` in `hybrid.py`; buggy GEV tail-model branch in `_compute_gev_risk`.
+- **Tests**: 284 passed (was 276), 0 skipped, 73% coverage. `torch` + `pytest-cov` installed.
 
-- **estimator.py**: GEV calibrated `risk_proba_`, `fit_with_ci()` (phase-randomized bootstrap), Gavish-Donoho optimal rank (`r='auto'`), **fixed real `transform(X)`** for new data + full sklearn compliance.
-- **adaptive.py**: `BayesianOnlineCP` (Adams-MacKay streaming), `_koopman_drift_detect`, `RegimeMemory` (parameter meta-learning), soft regime blending.
-- New `uncertainty.py`: surrogates, block bootstrap, CRPS, conformal helpers.
-- Validated demos committed under `demo/` (Lorenz + reports).
-- Personal notes cleaned; project now focused on verifiable numerical depth.
+---
 
 ## 📄 License
 
@@ -284,5 +340,5 @@ MIT + Commons Clause.
 ---
 
 <p align="center">
-  <sub>Built by <a href="https://github.com/jbrandonp">Brandon</a> with ❤️ and chaos theory.</sub>
+  <sub>Built by <a href="https://github.com/jbrandonp">Brandon Palhano</a></sub>
 </p>
