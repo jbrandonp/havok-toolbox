@@ -258,7 +258,7 @@ pytest tests/ -v
 
 ## 📄 License
 
-MIT — build the revolution.
+MIT + Commons Clause — build the revolution.
 
 ---
 
