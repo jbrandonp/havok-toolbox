@@ -11,9 +11,9 @@
   <img src="https://img.shields.io/badge/pip%20install-ready-success" alt="pip install">
 </p>
 
-**Turn chaos into actionable early-warning signals.**
+**Turn chaos into actionable early-warning signals.⚡**
 
-`havok-toolbox` implements the **HAVOK** (Hankel Alternative View of Koopman) algorithm from *"Chaos as an Intermittently Forced Linear System"* (Brunton, Brunton, Proctor & Kutz, *Nature Communications*, 2017). Given a univariate time series, HAVOK extracts the hidden **intermittent forcing signal** that precedes sudden regime shifts — seizures in EEG, market crashes, climate tipping points, industrial failures — before they manifest in the raw data.
+`🌀havok-toolbox` implements the **HAVOK** (Hankel Alternative View of Koopman) algorithm from *"Chaos as an Intermittently Forced Linear System"* (Brunton, Brunton, Proctor & Kutz, *Nature Communications*, 2017). Given a univariate time series, HAVOK extracts the hidden **intermittent forcing signal** that precedes sudden regime shifts — seizures in EEG🧠, market crashes📉, climate tipping points🌍, industrial failures⚙️ — before they manifest in the raw data.
 
 ---
 
