@@ -1,10 +1,8 @@
 """
 Benchmark Arena — public leaderboard for regime-shift detection methods.
 
-Auto-runs HAVOK vs all baselines on 20+ public datasets, generates
+Auto-runs HAVOK vs all baselines on public datasets, generates
 a JSON leaderboard, and prints rankings.
-
-This is the Phase 2 feature — become THE standard for comparison.
 
 Usage:
     python -m havolib.arena --datasets all --output leaderboard.json
