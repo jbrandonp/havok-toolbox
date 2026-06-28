@@ -346,6 +346,25 @@ pytest tests/ -v --cov=havolib
 
 ---
 
+## 🧪 Breaking-Point Characterization (106 tests, 8 categories)
+
+The toolbox has been stress-tested to identify its operational limits.
+
+| Dimension | Safe Range | Breaking Point | What Happens |
+|-----------|-----------|----------------|--------------|
+| Signal length | ≥ 20 pts | 18 pts | SciPy requires minimum samples |
+| Embedding dim `m` | 3 – 500 | 800 | Hankel > 50M element memory guard |
+| Delay `τ` | 1 – 100 | 200 (m=50) | Series too short for Hankel |
+| SVD rank `r` | 1 – m-1 | r ≥ m | Index error |
+| Noise tolerance | +40 to -20 dB SNR | None found | Risk sensitivity degrades < 0 dB |
+| Channels (mHAVOK) | 1 – 256+ | Not reached | Tested to 256 channels |
+| TV diff size | 100 – 5000 | 5000 | Hard guard; use spline |
+| SVD solver | scipy exact | Δ ~ 10⁻² random | Randomized is approximate |
+| NaN/Inf | Rejected | Explicit error | Clear message to user |
+| Constant signal | Fine | Near-zero forcing | As expected |
+
+---
+
 ## 🤝 Contributing
 
 Contributions welcome. See [Architecture Decision Records](docs/adr.md) for design philosophy and technical decisions.
