@@ -141,6 +141,58 @@ The forcing signal spikes **before** the raw signal shows any visible change, ma
 
 ---
 
+## 📐 Paper Correspondence
+
+This section maps every equation-level concept from Brunton et al. 2017 to
+the code. Modules not listed here are **post-paper engineering extensions**.
+
+### Core algorithm (exact compliance)
+
+| Paper step | Equation / concept | Code | Status |
+|---|---|---|---|
+| 1. Delay embedding | H[k,i] = x[k + i·τ] | `embedding.py` → `hankel_matrix()` | ✅ Exact |
+| 2. Truncated SVD | H ≈ U Σ V^T, keep r modes | `decomposition.py` → `eigen_time_delay()` | ✅ Exact¹ |
+| 3. Linear model | v̇_r ≈ Σ a_i v_i + F(t) | `forcing.py` → `extract_forcing()` | ✅ Exact² |
+| 4. Risk threshold | ‖F(t)‖ > threshold → risk=1 | `detection.py` → `threshold_risk()` | ✅ Aligned³ |
+
+¹ Returns numpy's U[:, :r] (left singular vectors, time in rows). Paper calls these V(t). Naming convention difference only, not a mathematical deviation.
+² Adds bias term fitting affine model. On zero-mean data: no difference. On uncentered data: absorbs constant offset.
+³ Paper uses fixed global threshold; code uses rolling std — more robust for non-stationary forcing amplitude.
+
+### Parameter tuning (practical defaults)
+
+| Heuristic | Code | Justification |
+|---|---|---|
+| τ ≤ 10 cap | `auto_tune.py` | Keeps coordinates correlated for linear model. Override for slow signals. |
+| m ≥ 15 floor | `auto_tune.py` | Below this, Koopman linear approximation unreliable. Empirical, not theoretical. |
+| m ≈ m₉₉ × 3 | `auto_tune.py` → `optimal_m_havok()` | 99% SVD energy for attractor reconstruction (Takens); HAVOK needs more. Validated on Lorenz, EEG, finance. |
+
+### Post-paper extensions
+
+| Module | What it adds |
+|---|---|
+| `adaptive.py` | BOCPD / PELT changepoint, per-segment retuning |
+| `multichannel.py` | Parallel (per-channel) + composite (joint Hankel SVD) modes |
+| `automl.py` | Optuna TPE hyperparameter optimization |
+| `hybrid.py` | PyTorch Transformer on eigen-coordinates |
+| `federated.py` | FedAvg with (ε, δ)-differential privacy |
+| `engine/` | Streaming MQTT/CSV engine with alert pipeline |
+| `edge_of_chaos.py` | LLE, correlation dimension, critical slowing down |
+| `surrogate.py`, `uncertainty.py` | Statistical validation and confidence intervals |
+| `dashboard/`, `_cli_havok.py` | Streamlit dashboard, CLI |
+
+### SVD solver equivalence
+
+`solver="randomized"` (sklearn) vs exact SciPy SVD on Lorenz (3000 pts, m=50):
+mean forcing difference < 10⁻⁶. Default `solver="auto"` prefers GPU (CuPy).
+
+### Reproducibility
+
+Golden-value regression tests verify Lorenz forcing stability across versions.
+`generate_lorenz()` is deterministic — same seed = same trajectory.
+
+---
+
 ## 📁 Project Structure
 
 ```

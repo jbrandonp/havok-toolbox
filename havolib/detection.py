@@ -99,11 +99,18 @@ def threshold_risk(forcing: np.ndarray,
 
 def pelt_changepoint(forcing: np.ndarray, penalty: float = 10.0) -> List[int]:
     """
-    Offline change-point detection on the forcing signal using ruptures Pelt
-    (penalised cost, not Bayesian).
+    Offline change-point detection on the forcing signal using ruptures.Pelt
+    with RBF cost model.  PELT (Pruned Exact Linear Time) is a frequentist
+    penalised-cost method, NOT a Bayesian changepoint detector.
 
-    The final artificial change-point equal to len(forcing) returned by ruptures
-    is stripped so only internal break indices are returned.
+    Unlike BOCPD (Bayesian Online Changepoint Detection), PELT works on the
+    full signal at once and selects change-points by minimising a cost
+    function with a linear penalty term.  It was chosen here because it is
+    deterministic, fast (O(n) expected), and produces reproducible results
+    without requiring prior distributions on run-lengths.
+
+    The final artificial change-point equal to len(forcing) returned by
+    ruptures is stripped so only internal break indices are returned.
 
     Raises
     ------

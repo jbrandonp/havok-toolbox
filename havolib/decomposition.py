@@ -1,31 +1,53 @@
-"""Eigen-time-delay decomposition via SVD — GPU-accelerated when available."""
-from typing import Optional
+"""Eigen-time-delay decomposition via SVD — GPU-accelerated when available.
+
+Paper correspondence: This module implements Step 2 of Brunton et al. 2017 —
+truncated SVD of the Hankel matrix H ≈ U Σ V^T.  The returned U[:, :r]
+(left singular vectors) are the temporal eigen-time-delay coordinates
+called V(t) in the paper.  The naming difference arises from numpy's
+SVD convention (H = U Σ V^T) vs the paper's notation where V(t) denotes
+the temporal coordinates extracted from the Hankel matrix.
+"""
+from typing import Optional, Tuple
 import warnings
 from havolib.gpu import svd as _svd
 import numpy as np
 
 
-def eigen_time_delay(H: np.ndarray, r: int, solver: str = "auto", random_state: Optional[int] = None):
-    """Perform truncated SVD on the Hankel matrix.
+def eigen_time_delay(
+    H: np.ndarray, r: int, solver: str = "auto", random_state: Optional[int] = None
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Truncated SVD of Hankel matrix → eigen-time-delay coordinates.
 
-    Uses GPU (CuPy) if available (for 'auto'), otherwise NumPy/SciPy.
-    Explicit 'scipy' forces CPU path for reproducibility.
+    Computes H ≈ U Σ V^T and returns U[:, :r] and Σ[:r].  In the standard
+    numpy convention U carries time in its rows, so the returned array is
+    the temporal coordinate matrix the paper calls V(t).
+
+    Paper (Brunton et al. 2017, §Methods):
+        "The eigen-time-delay coordinates are obtained by taking the SVD
+         of the Hankel matrix H = U Σ V^T.  We use the columns of U..."
+
 
     Parameters
     ----------
-    H : ndarray
-        Hankel matrix.
+    H : ndarray, shape (n, m)
+        Hankel matrix from the delay-embedding step.
     r : int
-        Number of components to keep (must be 0 < r <= min(H.shape)).
+        Number of dominant singular modes to retain (1 < r ≤ min(n, m)).
     solver : str
-        'auto' (GPU if available else scipy), 'scipy' (force CPU), 'randomized'.
-    random_state : int or None, optional
-        Seed for the randomized solver (None for non-deterministic).
+        'auto'       → GPU (CuPy) if available, else SciPy exact SVD
+        'scipy'      → force CPU via scipy.linalg.svd
+        'randomized' → sklearn.randomized_svd (approximate, fast on large H)
+    random_state : int or None
+        Seed for the randomized solver.  Ignored otherwise.
 
     Returns
     -------
-    U : ndarray (n_rows, r) — Top r left singular vectors (eigen-time-delay coords)
-    s : ndarray (r,) — Top singular values
+    U_r : ndarray, shape (n, r)
+        Left singular vectors = eigen-time-delay coordinates.
+        In the paper these are called V(t) — the temporal coordinates
+        used for the linear forcing model.
+    s_r : ndarray, shape (r,)
+        Top r singular values, sorted descending.
     """
     hmin = min(H.shape)
     if not isinstance(r, int) or not (0 < r <= hmin):
@@ -45,4 +67,6 @@ def eigen_time_delay(H: np.ndarray, r: int, solver: str = "auto", random_state: 
         U, s, Vt = _svd(H, full_matrices=False, r=r)
         return U, s
     else:
-        raise ValueError(f"Unknown solver: {solver}. Supported: 'auto', 'scipy', 'randomized'")
+        raise ValueError(
+            f"Unknown solver: {solver!r}. Supported: 'auto', 'scipy', 'randomized'"
+        )

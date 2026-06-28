@@ -106,14 +106,28 @@ def optimal_m_fnn(data: np.ndarray, tau: int, max_m: int = 50) -> int:
 
 
 def optimal_m_havok(data: np.ndarray, tau: int, max_m: int = 80) -> int:
-    """Return the optimal embedding dimension m for HAVOK.
+    """SVD-spectrum estimate of HAVOK embedding dimension.
 
-    Uses SVD spectrum to find where singular values plateau, then adds margin.
-    This is the RIGHT method for HAVOK — FNN gives too few dimensions for
-    a good linear Koopman model.
+    Builds a Hankel at ``max_m``, computes the full SVD, finds the smallest
+    m where cumulative singular-value energy reaches 99%, then applies an
+    empirical safety margin.
 
-    Algorithm: build Hankel at m=max_m, compute SVD, find m where cumulative
-    energy exceeds 99%, then add safety margin."""
+    Heuristic (×3 multiplier)
+    -------------------------
+    The 99%-energy point identifies the dimension sufficient for attractor
+    reconstruction (Takens).  HAVOK needs *more* dimensions for a good
+    linear Koopman model, hence the ×3 margin.  This is an empirical
+    rule of thumb validated on Lorenz, EEG, and financial benchmarks,
+    NOT derived from theory.  Minimum enforced at 15.
+
+    When it may fail
+    ----------------
+    - Quasi-periodic signals with slow SVD energy decay → overestimates m.
+    - Records shorter than ~500 points → max_m must be reduced.
+
+    Algorithm
+    ---------
+    Hankel at max_m → SVD → cumulative energy > 99% → m_99 × 3 → max(15, m)"""
     from havolib.embedding import hankel_matrix
     import numpy as np
 
