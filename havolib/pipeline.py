@@ -110,7 +110,7 @@ class HavokPipeline:
         )
 
     def fit(self, t: Optional[np.ndarray], x: np.ndarray) -> 'HavokPipeline':
-        """Run full HAVOK pipeline on (t, x).
+        """Run full HAVOK pipeline on (t, x) — delegates to HavokEstimator internally.
 
         Parameters
         ----------
@@ -138,7 +138,7 @@ class HavokPipeline:
 
         self.x_raw_ = np.asarray(x, dtype=float).copy()
 
-        # Apply pre-processing if enabled (deeper layer best practice)
+        # Apply pre-processing if enabled
         if self.do_preprocess:
             x = preprocess(
                 x,
@@ -150,37 +150,25 @@ class HavokPipeline:
             )
             logger.info("Pre-processing applied (interpolate/outlier/smooth).")
 
-        # Basic length sanity check (per deeper layer guidance)
+        # Basic length sanity check
         if len(x) < 10 * self.m:
             logger.warning(f"Data length {len(x)} may be too short for m={self.m} (recommend >10*m).")
 
-        # Ensure r <= m always (robustness after auto or direct construction)
-        self.r = min(self.r, max(2, self.m - 1))
+        # Delegate to HavokEstimator (single center of truth for HAVOK math)
+        from havolib.estimator import HavokEstimator
+        est = HavokEstimator(
+            tau=self.tau, m=self.m, r=self.r,
+            threshold_std=self.threshold_std, window=self.window,
+        )
+        est.fit(x, t=t)
 
-        # Memory guard for Hankel matrix (prevent OOM for large m*tau)
-        expected_rows = len(x) - (self.m - 1) * self.tau
-        if expected_rows <= 0:
-            raise ValueError("m * tau exceeds signal length; reduce m or tau.")
-        MAX_HANKEL_ROWS = 2_000_000
-        if expected_rows > MAX_HANKEL_ROWS:
-            raise MemoryError(
-                f"Hankel matrix would have {expected_rows} rows (> {MAX_HANKEL_ROWS}). "
-                "Reduce m/tau or downsample the signal."
-            )
-
-        H = hankel_matrix(x, self.m, self.tau)
-        self.n_skip_ = (self.m - 1) * self.tau
-        t_hankel = t[:H.shape[0]]
-
-        V, _ = eigen_time_delay(H, self.r)
-        forcing = extract_forcing(V, t_hankel)
-        risk = threshold_risk(forcing, self.window, self.threshold_std)
-
-        self.V_ = V
-        self.forcing_ = forcing
-        self.risk_ = risk
-        self.t_ = t_hankel
-        self.x_ = x[:H.shape[0]]
+        # Copy results into pipeline's attribute namespace
+        self.n_skip_ = est.n_skip_
+        self.V_ = est.eigen_coords_
+        self.forcing_ = est.forcing_
+        self.risk_ = est.risk_
+        self.t_ = t[self.n_skip_:]
+        self.x_ = x[self.n_skip_:]
         return self
 
     def get_forcing(self) -> np.ndarray:
