@@ -39,6 +39,7 @@ dev = ["pytest", "hypothesis>=6.100"]
 
 [project.scripts]
 havok = "_cli_havok:cli"
+havok-app = "havolib.dashboard.simple:main"
 
 [tool.setuptools]
 py-modules = ["_cli_havok"]

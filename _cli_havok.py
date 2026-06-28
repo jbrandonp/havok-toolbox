@@ -339,12 +339,92 @@ def engine_init():
 @click.option("--quiet", "-q", is_flag=True, help="Suppress per-dataset output.")
 def benchmark_cmd(datasets, methods, quiet):
     """Benchmark HAVOK vs baselines on regime-shift datasets."""
-    from benchmark.runner import run_benchmark, print_summary
+    from havolib.benchmark.runner import run_benchmark, print_summary
     ds = list(datasets) if datasets else None
     ms = list(methods) if methods else None
     click.echo("🚀 HAVOK Benchmark — Regime-Shift Detection")
     results = run_benchmark(datasets=ds, methods=ms, verbose=not quiet)
     print_summary(results)
+
+
+@cli.command("analyze")
+@click.argument("file", type=click.Path(exists=True), required=False)
+@click.option("--column", "-c", default=None, help="Column name for the signal (auto-detect if omitted).")
+@click.option("--output", "-o", default=None, help="Save results to CSV.")
+@click.option("--report", "-r", default=None, help="Save HTML report.")
+def analyze_cmd(file, column, output, report):
+    """One-click analysis: havok analyze data.csv [--column price] [--output results.csv]
+
+    No parameters needed — auto-tunes tau, m, r automatically.
+    """
+    import pandas as pd
+    from havolib.pipeline import HavokPipeline
+
+    if file is None:
+        click.echo("Usage: havok analyze <file.csv> [--column NAME] [--output results.csv]")
+        click.echo("Example: havok analyze eeg_data.csv --column Fp1")
+        return
+
+    # Load data
+    fname = str(file).lower()
+    if fname.endswith(".csv") or fname.endswith(".txt"):
+        df = pd.read_csv(file)
+    elif fname.endswith((".xlsx", ".xls")):
+        df = pd.read_excel(file)
+    else:
+        click.echo(f"Unsupported file format: {file}")
+        return
+
+    # Detect or select column
+    numeric_cols = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
+    if column and column in df.columns:
+        data = df[column].dropna().values
+    elif len(numeric_cols) > 0:
+        column = numeric_cols[0]
+        data = df[column].dropna().values
+        click.echo(f"Auto-detected column: '{column}' ({len(data)} points)")
+    else:
+        click.echo("No numeric columns found.")
+        return
+
+    if len(data) < 100:
+        click.echo(f"Need at least 100 data points, got {len(data)}.")
+        return
+
+    # Auto-tune + run
+    click.echo("Auto-tuning parameters...")
+    pipe = HavokPipeline()
+    pipe.auto_fit(None, data)
+    forcing = pipe.get_forcing()
+    risk = pipe.get_risk()
+
+    max_f = np.max(np.abs(forcing))
+    n_risk = int(np.sum(risk))
+    risk_pct = float(np.mean(risk)) * 100
+
+    click.echo(f"\nResults (τ={pipe.tau}, m={pipe.m}, r={pipe.r}):")
+    click.echo(f"  Data points:  {len(data)}")
+    click.echo(f"  Max forcing:  {max_f:.4f}")
+    click.echo(f"  Risk events:  {n_risk} ({risk_pct:.1f}% of signal)")
+
+    if risk_pct > 1:
+        click.echo(f"  ⚠️  Regime shifts detected at {risk_pct:.1f}% of timesteps.")
+    else:
+        click.echo("  ✅ No significant regime shifts detected.")
+
+    # Export
+    if output:
+        pd.DataFrame({"forcing": forcing, "risk": risk}).to_csv(output, index=False)
+        click.echo(f"\nResults saved to {output}")
+
+    if report:
+        with open(report, "w") as f:
+            f.write(f"""<html><body>
+<h1>HAVOK Analysis: {file}</h1>
+<p>Parameters: τ={pipe.tau}, m={pipe.m}, r={pipe.r}</p>
+<p>Max forcing: {max_f:.4f} | Risk events: {n_risk} ({risk_pct:.1f}%)</p>
+</body></html>""")
+        click.echo(f"Report saved to {report}")
 
 
 if __name__ == '__main__':
