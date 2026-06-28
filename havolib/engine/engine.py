@@ -68,10 +68,21 @@ class HavokEngine:
         self._tasks: List[asyncio.Task] = []
         self._running = False
 
-        # Load config
+        # Load config (validated)
         if config_path:
-            with open(config_path) as f:
-                raw = yaml.safe_load(f)
+            try:
+                with open(config_path) as f:
+                    raw = yaml.safe_load(f)
+            except (yaml.YAMLError, OSError) as e:
+                raise ValueError(
+                    f"Failed to load engine config from {config_path}: {e}. "
+                    "Check that the file exists and is valid YAML."
+                ) from e
+            if not isinstance(raw, dict):
+                raise ValueError(
+                    f"Engine config must be a YAML dictionary, got {type(raw).__name__}. "
+                    "Expected keys: streams, risk, alert_targets."
+                )
         elif config_dict:
             raw = config_dict
         else:

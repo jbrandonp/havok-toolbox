@@ -32,7 +32,7 @@ from .engine import (
     RiskEngine, RiskLevel, AlertPipeline, AlertRule, AlertTarget, AlertLevel, HavokEngine,
     EngineStream, EngineRuntime,  # runtime config containers (not the frozen config.py ones)
 )
-from .gpu import is_gpu_available, svd, lstsq, norm
+from .gpu import is_gpu_available, svd, lstsq, norm, free_gpu_memory
 from .serialize import save_pipeline, load_pipeline
 from .logging_config import init_logging, get_logger
 from .estimator import HavokEstimator, cross_val_score_havok, DIFF_METHODS

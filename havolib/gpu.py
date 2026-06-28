@@ -32,8 +32,14 @@ def _detect_gpu() -> bool:
             _GPU_AVAILABLE = True
             logger.info("GPU detected — using CuPy for linear algebra")
             return True
-    except (ImportError, Exception):
-        pass
+    except ImportError:
+        pass  # cupy not installed — expected, silent fallback to NumPy
+    except Exception as e:
+        logger.warning(
+            "CuPy import failed (CUDA version mismatch or driver issue): %s. "
+            "Falling back to NumPy/SciPy. Install matching CUDA toolkit for GPU acceleration.",
+            e
+        )
 
     _GPU_AVAILABLE = False
     logger.info("No GPU detected — using NumPy/SciPy")
@@ -103,3 +109,17 @@ def eigvals(W: np.ndarray) -> np.ndarray:
     if _GPU_AVAILABLE:
         return _xp.linalg.eigvals(_xp.asarray(W)).get()
     return np.linalg.eigvals(W)
+
+
+def free_gpu_memory() -> None:
+    """Release CuPy memory pool. Call after large GPU operations in long-running
+    processes to prevent pool fragmentation from repeated SVDs with fluctuating
+    matrix sizes.  No-op if CuPy is not installed or no GPU is active."""
+    try:
+        import cupy as _cp
+        _mem = _cp.get_default_memory_pool()
+        if _mem.used_bytes() > 0:
+            _mem.free_all_blocks()
+            logger.debug("CuPy memory pool freed")
+    except (ImportError, AttributeError):
+        pass  # cupy not installed — safe to ignore

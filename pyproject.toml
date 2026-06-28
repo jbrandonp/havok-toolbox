@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["time-series", "havok", "chaos", "regime-shift", "koopman", "embedding", "forcing", "eeg"]
 dependencies = [
-    "numpy>=1.21",
+    "numpy>=1.21,<2.0",
     "scipy>=1.7",
     "scikit-learn>=1.0",
 ]
