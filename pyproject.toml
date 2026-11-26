@@ -8,7 +8,7 @@ version = "0.3.0"
 description = "HAVOK Regime-Shift Detector: extract intermittent forcing signals from univariate time series using delay embedding + SVD (Brunton et al. 2017)"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license = {text = "MIT + Commons Clause"}
 authors = [
     {name = "HAVOK Toolbox"}
 ]
@@ -17,6 +17,8 @@ dependencies = [
     "numpy>=1.21,<2.0",
     "scipy>=1.7",
     "scikit-learn>=1.0",
+    "pyyaml>=6.0",
+    "click>=8.0",
 ]
 
 [project.optional-dependencies]
