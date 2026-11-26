@@ -5,10 +5,10 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.3.0-blue" alt="Version">
   <img src="https://img.shields.io/badge/python-3.9+-green" alt="Python">
-  <img src="https://img.shields.io/badge/tests-803%20passed-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-802%20passed-brightgreen" alt="Tests">
     <img src="https://img.shields.io/badge/coverage-65%25-yellow" alt="Coverage">
-  <img src="https://img.shields.io/badge/license-MIT-yellow" alt="License">
-  <img src="https://img.shields.io/badge/pip%20install-ready-success" alt="pip install">
+  <img src="https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-yellow" alt="License">
+  <img src="https://img.shields.io/badge/install-from%20source-blue" alt="Install from source">
 </p>
 
 **Turn chaos into actionable early-warning signals.⚡**
@@ -47,14 +47,16 @@
 run_havok_app.bat
 
 # Or from terminal
-pip install havok-toolbox[app]
+git clone https://github.com/jbrandonp/havok-toolbox
+cd havok-toolbox && pip install -e ".[dashboard]"
 havok-app
 ```
 Opens a browser with drag-and-drop file upload, auto-analysis, and report download.
 
 ### Command-line
 ```bash
-pip install havok-toolbox
+git clone https://github.com/jbrandonp/havok-toolbox
+cd havok-toolbox && pip install -e .
 
 # Analyze a CSV file (auto-detects columns)
 havok analyze data.csv
@@ -105,24 +107,23 @@ report.export("results.csv")
 ## 📦 Installation
 
 ```bash
+# Install from source (not yet published on PyPI)
+git clone https://github.com/jbrandonp/havok-toolbox
+cd havok-toolbox
+
 # Base install
-pip install havok-toolbox
+pip install -e .
 
 # With optional extras
-pip install havok-toolbox[streaming]   # MQTT engine
-pip install havok-toolbox[gpu]         # CuPy acceleration
-pip install havok-toolbox[automl]      # Optuna optimization
-pip install havok-toolbox[fast]        # Polars (10-50× CSV loading)
-pip install havok-toolbox[eeg]         # EDF/MNE support
-pip install havok-toolbox[torch]       # HAVOK-Transformer
-pip install havok-toolbox[app]         # Streamlit dashboard
-pip install havok-toolbox[sindy]       # SINDy model support
-pip install havok-toolbox[all]         # Everything
-pip install havok-toolbox[dev]         # Tests + Hypothesis
-
-# From source
-git clone https://github.com/jbrandonp/havok-toolbox
-cd havok-toolbox && pip install -e ".[dev]"
+pip install -e ".[streaming]"   # MQTT engine
+pip install -e ".[gpu]"         # CuPy acceleration
+pip install -e ".[automl]"      # Optuna optimization
+pip install -e ".[fast]"        # Polars (10-50× CSV loading)
+pip install -e ".[eeg]"         # EDF/MNE support
+pip install -e ".[torch]"       # HAVOK-Transformer
+pip install -e ".[dashboard]"   # Streamlit dashboard
+pip install -e ".[all]"         # Everything
+pip install -e ".[dev]"         # Tests + Hypothesis
 ```
 
 ---
@@ -202,7 +203,7 @@ via the `model_type` config field.
 | Model | Key | Install | Description |
 |-------|-----|---------|-------------|
 | **HAVOK** | `"havok"` | built-in | Hankel + Koopman (Brunton 2017) |
-| **SINDy** | `"sindy"` | `pip install havok-toolbox[sindy]` | Sparse identification of nonlinear dynamics |
+| **SINDy** | `"sindy"` | `From source (see Installation)` | Sparse identification of nonlinear dynamics |
 
 ```python
 # Switch model via config
@@ -355,7 +356,7 @@ streamlit run havolib/dashboard/engine_dashboard.py
 
 The test suite covers correctness, edge cases, and numerical stability:
 
-- **803 tests** passing with 65% line coverage
+- **802 tests** passing (verified 26 Nov 2026 with dev+automl extras, 14 skipped) with 65% line coverage
 - **Property-based tests**🔁 via Hypothesis: SVD orthonormality, embedding isotonicity, forcing determinism
 - **Golden value tests**🏅: fixed-seed Lorenz forcing output verified across versions
 - **Edge case coverage**🛡️: empty signals, constant signals, NaN/Inf handling, very short data, single-channel, invalid parameters
@@ -364,7 +365,7 @@ The test suite covers correctness, edge cases, and numerical stability:
 
 Run locally:
 ```bash
-pip install havok-toolbox[dev]
+pip install -e ".[dev,automl]"
 pytest tests/ -v --cov=havolib
 ```
 
@@ -417,7 +418,7 @@ pytest tests/ -v
 ### v0.3.0 — First Stable Release
 
 - **Multi-model platform**: `ModelRegistry` + `BaseRegimeModel` — pluggable architecture. Switch models via `model_type="sindy"`. Includes HAVOK (native) and SINDy (conditional) wrappers with `@ModelRegistry.register()`. See CONTRIBUTING.md for extension guide.
-- **Industrial test suite**: 803 tests (was 286) — 480 parametrized, 30 Hypothesis property-based, concurrency, memory, fault injection.
+- **Industrial test suite**: 802 tests (was 286) — 480 parametrized, 30 Hypothesis property-based, concurrency, memory, fault injection.
 - **Engineering hardening**: YAML config validation with clear error messages; CuPy import failure now logs actionable warning instead of silent fallback; `free_gpu_memory()` prevents pool fragmentation in long-running processes; `numpy<2.0` pinned to prevent NumPy 2.x ABI breakage.
 - **Paper compliance audit**: SVD coordinate flow verified — code is mathematically correct. Full Paper Correspondence section in README with compliance matrix, heuristic justification, and post-paper extension catalog. `eigen_time_delay()` docstring now explains numpy U vs paper V(t) naming convention.
 - **Scientific validation**: `test_forcing_sparsity_on_clean_lorenz` verifies HAVOK intermittency (p99/p90 > 1.5, max/median > 7). `test_svd_solver_equivalence` confirms randomized SVD matches exact within 1% tolerance.
@@ -427,7 +428,7 @@ pytest tests/ -v
 - **Pipeline/estimator unified**: `HavokPipeline.fit()` delegates to `HavokEstimator` internally — single center of truth for HAVOK math.
 - **True mHAVOK**: Added `method="composite"` to `MultichannelHAVOK` — composite Hankel matrix with joint SVD for genuine cross-channel coupling.
 - **One-click UX**: `run_havok_app.bat` (Windows launcher) and `havok-app` CLI entry point. Drag-and-drop Streamlit dashboard with auto-detection and report export.
-- **Portable install**: `pip install havok-toolbox` works from any directory. `benchmark/` and `dashboard/` moved into `havolib/`. `importlib.resources` for data files.
+- **Portable install**: Install from source with `pip install -e .` works from the cloned directory (PyPI publication pending). `benchmark/` and `dashboard/` moved into `havolib/`. `importlib.resources` for data files.
 - **Robustness**: `correlation_dimension` validates input ranges; `AdaptiveHAVOK` handles short data gracefully; `plot_dashboard` works with r<3; `FederatedHAVOK` raises `ValueError` instead of silent failure.
 - **Naming accuracy**: `bayesian_changepoint` → `pelt_changepoint` (with deprecated alias); `_collect_states_vectorized` → `_collect_states`; engine uses `EngineStream`/`EngineRuntime`.
 - **Dead code removed**: vestigial `risk_head` in `hybrid.py`; buggy GEV tail-model branch in `_compute_gev_risk`.
@@ -438,7 +439,7 @@ pytest tests/ -v
 ## 📄 License
 
 License: MIT + Commons Clause
-See the LICENSE file for full terms.
+See the License file for full terms.
 
 ---
 
