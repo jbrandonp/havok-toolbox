@@ -1,4 +1,4 @@
-# HAVOK Toolbox v0.8.0
+# HAVOK Toolbox v0.3.0
 # Core install: pip install -e .
 # Full: pip install -e ".[all]"
 # See pyproject.toml for categorized optional dependencies (viz, export, detection, cli, etc.)
