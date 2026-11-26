@@ -3,7 +3,7 @@ HAVOK Regime-Shift Detector — time series analysis with early-warning regime-s
 Core library for extracting intermittent forcing signals from time series
 using time-delay embedding + SVD (Brunton et al. 2017).
 
-Version 0.8.0 — Probabilistic risk (GEV), bootstrap CI, auto-rank, online BOCPD + Koopman adaptive, uncertainty module.
+Version 0.3.0 — Probabilistic risk (GEV), bootstrap CI, auto-rank, online BOCPD + Koopman adaptive, uncertainty module.
 """
 
 from .config import (
